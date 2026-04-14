@@ -1,113 +1,161 @@
-import { ThemedText } from "@/components/themed-text";
-import { APP_NAME } from "@/constants/app";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import { Link } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import React from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '@/constants/colors';
+import { FS, SP } from '@/constants/layout';
+import { mockFriends, mockActivities, mockStats } from '@/constants/mockData';
+import { ProgressCard } from '@/components/feed/ProgressCard';
+import { FriendChip } from '@/components/feed/FriendChip';
+import { ActivityCard } from '@/components/feed/ActivityCard';
+import { TabBar } from '@/components/common/TabBar';
 
-export default function HomeScreen() {
+// ─── Feed Screen ──────────────────────────────────────────────────────────────
+
+export default function FeedScreen() {
+  const { bottom } = useSafeAreaInsets();
+  const activeCount = mockFriends.filter(f => f.active).length;
+  // Tab bar height: paddingTop(8) + icon(22) + dot+gap(5) + label(10) + bottomPadding
+  const tabBarHeight = 45 + (bottom > 0 ? bottom : 12);
+
   return (
-    <View style={styles.background}>
-      {/* Gradient als absoluter Hintergrund */}
-      <LinearGradient
-        colors={["#667eea", "#764ba2"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
 
-      {/* Glassmorphism Card */}
-      <BlurView intensity={60} tint="light" style={styles.glassCard}>
-        <View style={styles.glassInner}>
-          <ThemedText type="title" style={styles.title}>
-            {APP_NAME}
-          </ThemedText>
-          <View style={styles.divider} />
-          <ThemedText style={styles.subtitle}>
-            Dein React-Native Basisprojekt ist bereit.
-          </ThemedText>
+      {/* ── TopBar ── */}
+      <View style={styles.topBar}>
+        <Text style={styles.appTitle}>stackd</Text>
+        <View style={styles.topBarActions}>
+          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="notifications-outline" size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="add" size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          <View style={styles.linkContainer}>
-            <Link href="/(tabs)/explore" style={styles.glassButton}>
-              <BlurView intensity={40} tint="light" style={styles.buttonBlur}>
-                <ThemedText type="link" style={styles.linkText}>
-                  Zur Explore-Seite →
-                </ThemedText>
-              </BlurView>
-            </Link>
+      {/* ── Scrollable content ── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Progress Card (Stats + Week) */}
+        <ProgressCard
+          gym={mockStats.gym}
+          kalorien={mockStats.kalorien}
+          zielCheck={mockStats.zielCheck}
+          week={mockStats.week}
+        />
 
-            <Link href="/modal" style={styles.glassButton}>
-              <BlurView intensity={40} tint="light" style={styles.buttonBlur}>
-                <ThemedText type="link" style={styles.linkText}>
-                  Info als Modal öffnen →
-                </ThemedText>
-              </BlurView>
-            </Link>
+        {/* Friends Row */}
+        <View style={styles.friendsSection}>
+          <View style={styles.friendsHeader}>
+            <Text style={styles.friendsTitle}>FREUNDE HEUTE</Text>
+            <Text style={styles.friendsActive}>
+              {activeCount} von {mockFriends.length} aktiv
+            </Text>
+          </View>
+          <View style={styles.chipsRow}>
+            {mockFriends.map(friend => (
+              <FriendChip key={friend.id} friend={friend} />
+            ))}
           </View>
         </View>
-      </BlurView>
-    </View>
+
+        {/* Section Label */}
+        <Text style={styles.sectionLabel}>Letzte Aktivitäten</Text>
+
+        {/* Activity Cards */}
+        {mockActivities.map(activity => (
+          <ActivityCard key={activity.id} activity={activity} />
+        ))}
+      </ScrollView>
+
+      {/* ── TabBar (absolute, persistent) ── */}
+      <TabBar activeTab="feed" />
+
+    </SafeAreaView>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  background: {
+  safeArea: {
     flex: 1,
-    justifyContent: "center",
-    padding: 24,
+    backgroundColor: colors.bg,
   },
-  glassCard: {
-    borderRadius: 28,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.45)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
+
+  // TopBar
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: SP.outer,
   },
-  glassInner: {
-    padding: 32,
-    gap: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  appTitle: {
+    fontSize: FS.title,
+    fontWeight: '500',
+    letterSpacing: -0.5,
+    color: colors.textPrimary,
   },
-  title: {
-    fontSize: 34,
-    fontWeight: "700",
-    color: "#fff",
-    textShadowColor: "rgba(0,0,0,0.15)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+  topBarActions: {
+    flexDirection: 'row',
+    gap: SP.gap,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
-    marginVertical: 4,
-  },
-  subtitle: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  linkContainer: {
-    gap: 12,
-    marginTop: 8,
-  },
-  glassButton: {
+  iconBtn: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.35)",
+    backgroundColor: colors.bgSecondary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonBlur: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+
+  // Scroll
+  scroll: {
+    flex: 1,
   },
-  linkText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
+  scrollContent: {
+    paddingTop: SP.gap,
+  },
+
+  // Friends Row
+  friendsSection: {
+    marginHorizontal: SP.outer,
+    marginBottom: SP.gap * 1.6,
+  },
+  friendsHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: SP.gap,
+  },
+  friendsTitle: {
+    fontSize: FS.small,
+    color: colors.textTertiary,
+    letterSpacing: 0.3,
+  },
+  friendsActive: {
+    fontSize: FS.tiny,
+    color: colors.textTertiary,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: SP.gap,
+  },
+
+  // Section Label
+  sectionLabel: {
+    marginHorizontal: SP.outer,
+    marginBottom: SP.gap * 1.4,
+    fontSize: FS.small,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

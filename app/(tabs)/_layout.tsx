@@ -15,6 +15,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // Hide the native tab bar — the Feed screen uses a custom TabBar
+        tabBarStyle: { display: 'none' },
       }}
     >
       <Tabs.Screen
