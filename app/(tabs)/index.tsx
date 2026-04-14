@@ -57,11 +57,15 @@ export default function FeedScreen() {
               {activeCount} von {mockFriends.length} aktiv
             </Text>
           </View>
-          <View style={styles.chipsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
             {mockFriends.map(friend => (
               <FriendChip key={friend.id} friend={friend} />
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Section Label */}
@@ -127,17 +131,18 @@ const styles = StyleSheet.create({
 
   // Friends Row
   friendsSection: {
-    marginHorizontal: SP.outer,
     marginBottom: SP.gap * 1.6,
   },
   friendsHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
+    marginHorizontal: SP.outer,
     marginBottom: SP.gap,
   },
   friendsTitle: {
     fontSize: FS.small,
+    fontWeight: '600',
     color: colors.textTertiary,
     letterSpacing: 0.3,
   },
@@ -147,7 +152,8 @@ const styles = StyleSheet.create({
   },
   chipsRow: {
     flexDirection: 'row',
-    gap: SP.gap,
+    gap: 7,
+    paddingHorizontal: SP.outer,
   },
 
   // Section Label

@@ -129,9 +129,9 @@ const styles = StyleSheet.create({
     marginBottom: SP.gap * 1.4,
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -143,12 +143,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: FS.body,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
   },
   time: {
-    fontSize: FS.tiny,
+    fontSize: 12,
     color: colors.textTertiary,
     marginTop: 1,
   },

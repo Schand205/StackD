@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
@@ -53,12 +53,20 @@ const TODAY_INDEX = 2; // Wednesday (mock data)
 export function ProgressCard({ gym, kalorien, zielCheck, week }: Props) {
   return (
     <View style={styles.outerCard}>
-      {/* ── All 3 stat cards in a single row — no scroll needed on 390px ── */}
-      <View style={styles.cardsRow}>
+      <Text style={styles.sectionTitle}>Dein heutiger Stand</Text>
+
+      {/* ── Stat cards — horizontal snap scroll ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={138}
+        decelerationRate="fast"
+        contentContainerStyle={styles.cardsRow}
+      >
         <GymCard gym={gym} />
         <KalorienCard kal={kalorien} />
         <ZielCheckCard ziel={zielCheck} />
-      </View>
+      </ScrollView>
 
       {/* ── Week bar ── */}
       <WeekBar week={week} />
@@ -82,7 +90,7 @@ function GymCard({ gym }: { gym: GymStats }) {
         <Text style={styles.gymBadgeText}>{gym.restDay ? 'Ruhetag' : 'Training'}</Text>
       </View>
       <Text style={[styles.cardSub, { marginTop: 3 }]}>{gym.lastDay}</Text>
-      <Text style={styles.cardValue}>{gym.exercises} Übungen</Text>
+      <Text style={styles.cardValue} numberOfLines={1}>{gym.exercises} Übungen</Text>
 
       <View style={styles.divider} />
 
@@ -204,28 +212,33 @@ function ZielCheckCard({ ziel }: { ziel: ZielCheck }) {
 
 // ─── Week Bar ─────────────────────────────────────────────────────────────────
 
+const MAX_BAR_HEIGHT = 26;
+
 function WeekBar({ week }: { week: readonly number[] }) {
   return (
     <View style={styles.weekBar}>
       {week.map((pct, i) => {
-        const isToday   = i === TODAY_INDEX;
-        const isDone    = pct === 100 && !isToday;
-        const isPartial = pct > 0 && pct < 100 && !isToday;
+        const isToday = i === TODAY_INDEX;
+        const fillHeight = Math.round((pct / 100) * MAX_BAR_HEIGHT);
 
-        let bg: string = colors.bgSecondary;
-        if (isDone)    bg = colors.green;
-        if (isPartial) bg = colors.gray;
-        if (isToday)   bg = '#AFA9EC';
+        let fillColor: string = colors.green;
+        if (isToday) fillColor = '#AFA9EC';
+        else if (pct < 100) fillColor = colors.gray;
 
         return (
           <View key={i} style={styles.weekCol}>
-            <View
-              style={[
-                styles.weekBlock,
-                { backgroundColor: bg },
-                isToday && styles.weekBlockToday,
-              ]}
-            />
+            {/* Background track */}
+            <View style={[styles.weekBlock, isToday && styles.weekBlockToday]}>
+              {/* Fill — anchored to bottom */}
+              {pct > 0 && (
+                <View
+                  style={[
+                    styles.weekFill,
+                    { height: fillHeight, backgroundColor: fillColor },
+                  ]}
+                />
+              )}
+            </View>
             <Text style={[styles.weekLabel, isToday && styles.weekLabelToday]}>
               {WEEK_LABELS[i]}
             </Text>
@@ -249,14 +262,24 @@ const styles = StyleSheet.create({
     padding: SP.card,
   },
 
+  sectionTitle: {
+    fontSize: FS.body,
+    fontWeight: '700',
+    color: colors.gray,
+    opacity: 1.0,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: SP.gap * 1.2,
+  },
+
   cardsRow: {
     flexDirection: 'row',
     gap: SP.gap,
-    marginBottom: SP.gap * 2,
+    paddingBottom: SP.gap * 2,
   },
 
   statCard: {
-    flex: 1,
+    minWidth: 130,
     backgroundColor: colors.bgSecondary,
     borderRadius: 10,
     padding: SP.gap * 1.4,
@@ -410,15 +433,22 @@ const styles = StyleSheet.create({
   },
   weekBlock: {
     width: '100%',
-    height: 18,
-    borderRadius: 2,
+    height: 26,
+    borderRadius: 4,
+    backgroundColor: colors.bgSecondary,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
   weekBlockToday: {
     borderWidth: 1.5,
     borderColor: colors.purple,
   },
+  weekFill: {
+    width: '100%',
+    borderRadius: 4,
+  },
   weekLabel: {
-    fontSize: FS.tiny * 0.9,
+    fontSize: 10,
     color: colors.textTertiary,
   },
   weekLabelToday: {

@@ -64,24 +64,23 @@ export function FriendChip({ friend }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SP.gap * 0.85,
+    gap: SP.gap,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 20,
-    paddingTop: 3,
-    paddingBottom: 3,
-    paddingLeft: 3,
-    paddingRight: SP.gap * 1.4,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 6,
+    paddingRight: 12,
   },
   inactive: {
     opacity: 0.5,
   },
   avatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -90,12 +89,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   name: {
-    fontSize: FS.small,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
   status: {
-    fontSize: FS.tiny,
+    fontSize: 10,
     color: colors.textTertiary,
     marginTop: 1,
   },
