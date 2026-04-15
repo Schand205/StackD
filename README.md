@@ -44,6 +44,3 @@ npm run web
 - `assets/`
   Bilder, Fonts und statische Dateien.
 
-## Nächster Schritt
-
-Als nächstes kannst du echte API-Endpunkte in `constants/app.ts` und erste Feature-Screens in `app/(tabs)/` ergänzen.
