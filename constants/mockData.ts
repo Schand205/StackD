@@ -14,7 +14,6 @@ export const mockActivities = [
     pr: true,
     pills: ['82,5 kg', '5 × 5', 'Brust-Tag'],
     likes: 3,
-    comments: 2,
   },
   {
     id: '2',
@@ -25,7 +24,6 @@ export const mockActivities = [
     pr: false,
     pills: ['2.200 kcal', '168 g Protein'],
     likes: 5,
-    comments: 0,
   },
   {
     id: '3',
@@ -36,7 +34,6 @@ export const mockActivities = [
     pr: false,
     pills: ['4 Übungen', '58 Min.'],
     likes: 2,
-    comments: 0,
   },
 ] as const;
 

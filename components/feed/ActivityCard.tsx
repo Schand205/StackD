@@ -13,7 +13,6 @@ export type Activity = {
   pr: boolean;
   pills: readonly string[];
   likes: number;
-  comments: number;
 };
 
 type Props = {
@@ -98,14 +97,6 @@ export function ActivityCard({ activity, onPress }: Props) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.reactionBtn}>
-          <Ionicons name="chatbubble-outline" size={11} color={colors.textTertiary} />
-          <Text style={styles.reactionText}>{activity.comments}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.reactionBtn}>
-          <Text style={styles.reactionText}>Kommentieren →</Text>
-        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );

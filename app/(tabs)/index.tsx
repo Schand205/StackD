@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
@@ -13,8 +14,14 @@ import { TabBar } from '@/components/common/TabBar';
 
 // ─── Feed Screen ──────────────────────────────────────────────────────────────
 
+const TAB_ROUTES: Record<string, string> = {
+  feed: '/(tabs)/',
+  gym:  '/(tabs)/gym',
+};
+
 export default function FeedScreen() {
   const { bottom } = useSafeAreaInsets();
+  const router = useRouter();
   const activeCount = mockFriends.filter(f => f.active).length;
   // Tab bar height: paddingTop(8) + icon(22) + dot+gap(5) + label(10) + bottomPadding
   const tabBarHeight = 45 + (bottom > 0 ? bottom : 12);
@@ -78,7 +85,10 @@ export default function FeedScreen() {
       </ScrollView>
 
       {/* ── TabBar (absolute, persistent) ── */}
-      <TabBar activeTab="feed" />
+      <TabBar
+        activeTab="feed"
+        onTabPress={key => { if (TAB_ROUTES[key]) router.navigate(TAB_ROUTES[key] as never); }}
+      />
 
     </SafeAreaView>
   );
