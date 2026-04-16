@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Animated,
+  StyleSheet, Animated, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,7 +13,7 @@ import { TabBar } from '@/components/common/TabBar'
 import { SetEntrySheet } from '@/components/gym/SetEntrySheet'
 import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
-import { mockWeekPlan, mockTemplates } from '@/data/mockGymData'
+import { mockWeekPlan, defaultTemplatesPerSplit } from '@/data/mockGymData'
 import type { WeekDay, WeekPlan, Template, WorkoutSplit } from '@/types/gym'
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -248,6 +248,7 @@ export default function GymScreen() {
   // ── Split ──
   const [currentSplit, setCurrentSplit] = useState<WorkoutSplit>('PPL')
   const [splitSheetVisible, setSplitSheetVisible] = useState(false)
+  const [userTemplates, setUserTemplates] = useState(defaultTemplatesPerSplit['PPL'])
 
   // ── DayAssignSheet ──
   const [assignSheetVisible, setAssignSheetVisible] = useState(false)
@@ -267,7 +268,7 @@ export default function GymScreen() {
   const currentWeekDay  = WEEK_KEYS[selectedDay]
   const currentTemplateId = weekPlan[currentWeekDay] ?? null
   const currentTemplate = currentTemplateId
-    ? mockTemplates.find(t => t.id === currentTemplateId) ?? null
+    ? userTemplates.find(t => t.id === currentTemplateId) ?? null
     : null
   const exercises = currentTemplateId ? (exerciseData[currentTemplateId] ?? []) : []
 
@@ -276,6 +277,35 @@ export default function GymScreen() {
     : `${currentWeekDay}. – ${currentTemplate?.name ?? 'Ruhetag'}`
 
   // ── Handlers ──
+
+  // ── Split select ──
+
+  const SPLIT_LABELS: Record<WorkoutSplit, string> = {
+    PPL:        'Push/Pull/Legs',
+    UpperLower: 'Upper/Lower',
+    BroSplit:   'Bro Split',
+    FullBody:   'Full Body',
+    Arnold:     'Arnold Split',
+  }
+
+  function handleSplitSelect(newSplit: WorkoutSplit) {
+    if (newSplit === currentSplit) return
+    Alert.alert(
+      `${SPLIT_LABELS[currentSplit]} → ${SPLIT_LABELS[newSplit]}`,
+      'Deine Woche wird zurückgesetzt.\nDeine bisherigen Logs bleiben erhalten.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Split wechseln',
+          onPress: () => {
+            setCurrentSplit(newSplit)
+            setUserTemplates(defaultTemplatesPerSplit[newSplit])
+            setWeekPlan({ Mo: null, Di: null, Mi: null, Do: null, Fr: null, Sa: null, So: null })
+          },
+        },
+      ]
+    )
+  }
 
   function handleDayPress(idx: number) {
     setSelectedDay(idx)
@@ -288,7 +318,7 @@ export default function GymScreen() {
 
     // Initialize exercise data for newly assigned template if not already present
     if (templateId && !exerciseData[templateId]) {
-      const template = mockTemplates.find(t => t.id === templateId)
+      const template = userTemplates.find(t => t.id === templateId)
       if (template) {
         setExerciseData(prev => ({
           ...prev,
@@ -361,7 +391,7 @@ export default function GymScreen() {
       <View style={styles.weekStrip}>
         {WEEK_KEYS.map((weekDay, idx) => {
           const tId       = weekPlan[weekDay]
-          const tName     = tId ? (mockTemplates.find(t => t.id === tId)?.name ?? null) : null
+          const tName     = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
           const logged    = tId ? (exerciseData[tId] ?? []).some(ex => ex.sets.length > 0) : false
 
           return (
@@ -427,7 +457,7 @@ export default function GymScreen() {
       <SplitSelectSheet
         visible={splitSheetVisible}
         onClose={() => setSplitSheetVisible(false)}
-        onSelect={split => setCurrentSplit(split)}
+        onSelect={handleSplitSelect}
         currentSplit={currentSplit}
       />
 
@@ -438,7 +468,7 @@ export default function GymScreen() {
         onAssign={handleAssign}
         day={assignSheetState?.weekDay ?? 'Mo'}
         dayLabel={assignSheetState ? getDayLabel(assignSheetState.index) : ''}
-        templates={mockTemplates}
+        templates={userTemplates}
         currentTemplateId={assignSheetState ? (weekPlan[assignSheetState.weekDay] ?? null) : null}
       />
 

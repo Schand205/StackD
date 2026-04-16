@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   View, Text, TouchableOpacity, Modal, Pressable,
-  ScrollView, StyleSheet,
+  ScrollView, StyleSheet, Alert,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -50,6 +50,13 @@ function TemplateRow({ template, isActive, onPress }: TemplateRowProps) {
         </Text>
         <Text style={styles.rowSub}>{template.exercises.length} Übungen</Text>
       </View>
+      <TouchableOpacity
+        onPress={() => Alert.alert('Schablonen-Editor', 'Schablonen-Editor kommt in einem späteren Schritt.')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+        activeOpacity={0.6}
+      >
+        <Text style={styles.editLink}>bearbeiten</Text>
+      </TouchableOpacity>
       <Ionicons
         name={isActive ? 'checkmark' : 'chevron-forward'}
         size={16}
@@ -243,6 +250,10 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
     marginLeft: 4,
+  },
+  editLink: {
+    fontSize: FS.tiny,
+    color: colors.textTertiary,
   },
 
   // Rest day row

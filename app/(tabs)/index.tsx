@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { ProgressCard } from '@/components/feed/ProgressCard';
 import { FriendChip } from '@/components/feed/FriendChip';
 import { ActivityCard } from '@/components/feed/ActivityCard';
 import { TabBar } from '@/components/common/TabBar';
+import { QuickLogSheet } from '@/components/shared/QuickLogSheet';
 
 // ─── Feed Screen ──────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ export default function FeedScreen() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   const activeCount = mockFriends.filter(f => f.active).length;
+  const [quickLogVisible, setQuickLogVisible] = useState(false);
   // Tab bar height: paddingTop(8) + icon(22) + dot+gap(5) + label(10) + bottomPadding
   const tabBarHeight = 45 + (bottom > 0 ? bottom : 12);
 
@@ -36,7 +38,7 @@ export default function FeedScreen() {
           <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
             <Ionicons name="notifications-outline" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => setQuickLogVisible(true)}>
             <Ionicons name="add" size={18} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -88,6 +90,15 @@ export default function FeedScreen() {
       <TabBar
         activeTab="feed"
         onTabPress={key => { if (TAB_ROUTES[key]) router.navigate(TAB_ROUTES[key] as never); }}
+      />
+
+      <QuickLogSheet
+        visible={quickLogVisible}
+        onClose={() => setQuickLogVisible(false)}
+        onNavigate={target => {
+          if (target === 'gym') router.push('/(tabs)/gym' as never)
+          else router.push('/(tabs)/calories' as never)
+        }}
       />
 
     </SafeAreaView>
