@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, Animated, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
 import { TabBar } from '@/components/common/TabBar'
@@ -14,6 +16,7 @@ import { SetEntrySheet } from '@/components/gym/SetEntrySheet'
 import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
 import { mockWeekPlan, defaultTemplatesPerSplit } from '@/data/mockGymData'
+import { useGymContext } from '@/context/GymContext'
 import type { WeekDay, WeekPlan, Template, WorkoutSplit } from '@/types/gym'
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -117,11 +120,17 @@ type DayCellProps = {
   isToday: boolean
   logged: boolean
   onPress: () => void
+  onLongPress: () => void
 }
 
-function DayCell({ label, templateName, isSelected, isToday, logged, onPress }: DayCellProps) {
+function DayCell({ label, templateName, isSelected, isToday, logged, onPress, onLongPress }: DayCellProps) {
   return (
-    <TouchableOpacity style={styles.dayCell} onPress={onPress} activeOpacity={0.7}>
+    <Pressable
+      style={({ pressed }) => [styles.dayCell, pressed && styles.dayCellPressed]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+    >
       <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
         {isToday ? 'heute' : label}
       </Text>
@@ -142,7 +151,7 @@ function DayCell({ label, templateName, isSelected, isToday, logged, onPress }: 
       )}
 
       {logged && <View style={styles.loggedDot} />}
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 
@@ -245,14 +254,22 @@ export default function GymScreen() {
   const [entrySheetVisible, setEntrySheetVisible] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState<SelectedExercise | null>(null)
 
-  // ── Split ──
-  const [currentSplit, setCurrentSplit] = useState<WorkoutSplit>('PPL')
+  // ── Split + templates from context ──
+  const { userTemplates, setUserTemplates, currentSplit, setCurrentSplit } = useGymContext()
   const [splitSheetVisible, setSplitSheetVisible] = useState(false)
-  const [userTemplates, setUserTemplates] = useState(defaultTemplatesPerSplit['PPL'])
 
   // ── DayAssignSheet ──
   const [assignSheetVisible, setAssignSheetVisible] = useState(false)
   const [assignSheetState, setAssignSheetState] = useState<AssignSheetState | null>(null)
+
+  // ── Long-press hint ──
+  const [showLongPressHint, setShowLongPressHint] = useState(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem('gym_longpress_hint_seen').then(val => {
+      if (val === null) setShowLongPressHint(true)
+    })
+  }, [])
 
   // ── PR Toast ──
   const [showPRToast, setShowPRToast] = useState(false)
@@ -307,10 +324,18 @@ export default function GymScreen() {
     )
   }
 
-  function handleDayPress(idx: number) {
+  function handleDayTap(idx: number) {
     setSelectedDay(idx)
+  }
+
+  function handleDayLongPress(idx: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setAssignSheetState({ weekDay: WEEK_KEYS[idx], index: idx })
     setAssignSheetVisible(true)
+    if (showLongPressHint) {
+      setShowLongPressHint(false)
+      AsyncStorage.setItem('gym_longpress_hint_seen', '1')
+    }
   }
 
   function handleAssign(day: WeekDay, templateId: string | null) {
@@ -402,11 +427,17 @@ export default function GymScreen() {
               isSelected={selectedDay === idx}
               isToday={idx === TODAY_IDX}
               logged={logged}
-              onPress={() => handleDayPress(idx)}
+              onPress={() => handleDayTap(idx)}
+              onLongPress={() => handleDayLongPress(idx)}
             />
           )
         })}
       </View>
+
+      {/* ── Long-press hint ── */}
+      {showLongPressHint && (
+        <Text style={styles.longPressHint}>Gedrückt halten zum Planen</Text>
+      )}
 
       {/* ── PR Toast ── */}
       {showPRToast && prToastData && (
@@ -584,6 +615,18 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: GREEN_LOGGED,
+  },
+  dayCellPressed: {
+    opacity: 0.6,
+  },
+
+  // ── Long-press hint ──
+  longPressHint: {
+    fontSize: 10,
+    color: '#cccccc',
+    textAlign: 'center',
+    marginTop: -SP.gap,
+    marginBottom: SP.gap,
   },
 
   // ── PR Toast ──

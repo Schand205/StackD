@@ -1,9 +1,10 @@
 import React from 'react'
 import {
   View, Text, TouchableOpacity, Modal, Pressable,
-  ScrollView, StyleSheet, Alert,
+  ScrollView, StyleSheet,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
@@ -35,9 +36,10 @@ type TemplateRowProps = {
   template: Template
   isActive: boolean
   onPress: () => void
+  onEdit: () => void
 }
 
-function TemplateRow({ template, isActive, onPress }: TemplateRowProps) {
+function TemplateRow({ template, isActive, onPress, onEdit }: TemplateRowProps) {
   return (
     <TouchableOpacity
       style={[styles.row, isActive && styles.rowActive]}
@@ -51,7 +53,7 @@ function TemplateRow({ template, isActive, onPress }: TemplateRowProps) {
         <Text style={styles.rowSub}>{template.exercises.length} Übungen</Text>
       </View>
       <TouchableOpacity
-        onPress={() => Alert.alert('Schablonen-Editor', 'Schablonen-Editor kommt in einem späteren Schritt.')}
+        onPress={onEdit}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
         activeOpacity={0.6}
       >
@@ -91,10 +93,18 @@ export function DayAssignSheet({
   currentTemplateId,
 }: DayAssignSheetProps) {
   const { bottom } = useSafeAreaInsets()
+  const router = useRouter()
 
   function handleSelect(templateId: string | null) {
     onAssign(day, templateId)
     onClose()
+  }
+
+  function handleEdit(templateId: string) {
+    onClose()
+    setTimeout(() => {
+      router.push({ pathname: '/gym/template-editor', params: { templateId } } as never)
+    }, 50)
   }
 
   return (
@@ -132,6 +142,7 @@ export function DayAssignSheet({
                   template={t}
                   isActive={currentTemplateId === t.id}
                   onPress={() => handleSelect(t.id)}
+                  onEdit={() => handleEdit(t.id)}
                 />
                 {idx < templates.length - 1 && <View style={styles.rowDivider} />}
               </React.Fragment>
