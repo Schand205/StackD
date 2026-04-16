@@ -555,20 +555,20 @@ const styles = StyleSheet.create({
     marginHorizontal: SP.outer,
     marginBottom: SP.gap * 1.5,
     backgroundColor: colors.bgCard,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 0.5,
     borderColor: '#e8e8e6',
-    paddingHorizontal: SP.gap * 0.5,
-    paddingVertical: SP.gap,
+    paddingHorizontal: SP.gap * 0.75,
+    paddingVertical: SP.gap * 1.8,
   },
   dayCell: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 2,
+    gap: 7,
+    paddingVertical: 4,
   },
   dayLabel: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     color: colors.textTertiary,
   },
   dayLabelToday: {
@@ -577,9 +577,9 @@ const styles = StyleSheet.create({
   },
   splitPill: {
     borderRadius: 20,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    minWidth: 32,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    minWidth: 36,
     alignItems: 'center',
   },
   splitPillActive: {
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     borderColor: ACCENT_BORDER,
   },
   splitPillText: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     fontWeight: '500',
   },
   splitPillTextActive: {
@@ -601,8 +601,8 @@ const styles = StyleSheet.create({
     color: ACCENT,
   },
   emptyDayPill: {
-    width: 30,
-    height: 22,
+    width: 36,
+    height: 28,
     borderRadius: 20,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -611,9 +611,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loggedDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: GREEN_LOGGED,
   },
   dayCellPressed: {
@@ -677,24 +677,24 @@ const styles = StyleSheet.create({
 
   // ── Section Title ──
   sectionTitle: {
-    fontSize: FS.body,
+    fontSize: FS.large * 0.82,
     fontWeight: '500',
     color: colors.textPrimary,
-    marginBottom: SP.gap * 1.8,
+    marginBottom: SP.gap * 2,
   },
 
   // ── Exercise Card ──
   exerciseCard: {
     backgroundColor: colors.bgCard,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 0.5,
     borderColor: '#e8e8e6',
-    padding: SP.card,
-    marginBottom: SP.gap * 1.5,
-    gap: SP.gap * 1.6,
+    padding: SP.card * 1.2,
+    marginBottom: SP.gap * 1.8,
+    gap: SP.gap * 1.8,
   },
   exerciseHeader: {
-    gap: 3,
+    gap: 4,
   },
   exerciseTitleRow: {
     flexDirection: 'row',
@@ -702,24 +702,24 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   exerciseName: {
-    fontSize: FS.body,
+    fontSize: FS.body * 1.1,
     fontWeight: '500',
     color: colors.textPrimary,
   },
   exerciseSubtitle: {
-    fontSize: FS.small,
+    fontSize: FS.body * 0.88,
     color: colors.textTertiary,
   },
   prBadge: {
     backgroundColor: `${AMBER_PR}1a`,
     borderRadius: 6,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 0.5,
     borderColor: `${AMBER_PR}55`,
   },
   prBadgeText: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     fontWeight: '700',
     color: AMBER_PR,
     letterSpacing: 0.4,
@@ -727,25 +727,25 @@ const styles = StyleSheet.create({
   setsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SP.gap,
+    gap: SP.gap * 1.2,
   },
   setPill: {
     backgroundColor: colors.bgSecondary,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 0.5,
     borderColor: colors.border,
   },
   setPillText: {
-    fontSize: FS.small,
+    fontSize: FS.body * 0.88,
     fontWeight: '500',
     color: colors.textSecondary,
   },
   emptySetPill: {
-    width: 38,
-    height: 28,
-    borderRadius: 8,
+    width: 44,
+    height: 32,
+    borderRadius: 9,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.gray,
