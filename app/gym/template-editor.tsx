@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
-import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet,
-} from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { ScrollView } from 'react-native-gesture-handler'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useGymContext } from '@/context/GymContext'
 import { ExercisePickerSheet } from '@/components/gym/ExercisePickerSheet'
+import { DraggableExerciseList } from '@/components/gym/DraggableExerciseList'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
 import type { Exercise } from '@/types/gym'
@@ -21,41 +21,6 @@ const SPLIT_LABELS: Record<string, string> = {
   BroSplit:   'Bro Split',
   FullBody:   'Full Body',
   Arnold:     'Arnold Split',
-}
-
-// ─── ExerciseRow ──────────────────────────────────────────────────────────────
-
-type ExerciseRowProps = {
-  exercise: Exercise
-  onRemove: () => void
-}
-
-function ExerciseRow({ exercise, onRemove }: ExerciseRowProps) {
-  return (
-    <View style={styles.exerciseRow}>
-      {/* Drag handle — placeholder */}
-      <View style={styles.dragHandle}>
-        <Ionicons name="reorder-three-outline" size={22} color="#dddddd" />
-      </View>
-
-      {/* Info */}
-      <View style={styles.exerciseInfo}>
-        <Text style={styles.exerciseName}>{exercise.name}</Text>
-        <Text style={styles.exerciseMeta}>
-          {exercise.muscleGroup} · {exercise.defaultSets} Sätze × {exercise.defaultReps} Reps
-        </Text>
-      </View>
-
-      {/* Remove */}
-      <TouchableOpacity
-        onPress={onRemove}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        activeOpacity={0.6}
-      >
-        <Ionicons name="close-circle" size={20} color="#ff4d4d" style={{ opacity: 0.7 }} />
-      </TouchableOpacity>
-    </View>
-  )
 }
 
 // ─── TemplateEditor ───────────────────────────────────────────────────────────
@@ -83,6 +48,10 @@ export default function TemplateEditor() {
 
   function addExercise(ex: Exercise) {
     setExercises(prev => [...prev, ex])
+  }
+
+  function handleReorder(reordered: Exercise[]) {
+    setExercises(reordered)
   }
 
   if (!template) return null
@@ -133,12 +102,11 @@ export default function TemplateEditor() {
             <Text style={styles.emptySub}>Tippe auf „Übung hinzufügen".</Text>
           </View>
         ) : (
-          exercises.map((ex, idx) => (
-            <React.Fragment key={ex.id}>
-              <ExerciseRow exercise={ex} onRemove={() => removeExercise(ex.id)} />
-              {idx < exercises.length - 1 && <View style={styles.rowDivider} />}
-            </React.Fragment>
-          ))
+          <DraggableExerciseList
+            exercises={exercises}
+            onReorder={handleReorder}
+            onRemove={removeExercise}
+          />
         )}
 
         {exercises.length > 0 && (
@@ -218,38 +186,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SP.outer,
     paddingTop: SP.gap * 1.5,
     paddingBottom: 32,
-  },
-
-  // ── Exercise Row ──
-  exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: SP.card,
-    gap: SP.gap * 1.2,
-  },
-  dragHandle: {
-    width: 22,
-    alignItems: 'center',
-  },
-  exerciseInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  exerciseName: {
-    fontSize: FS.body,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  exerciseMeta: {
-    fontSize: FS.small,
-    color: colors.textTertiary,
-  },
-
-  rowDivider: {
-    height: 6,
   },
 
   // ── Drag hint ──

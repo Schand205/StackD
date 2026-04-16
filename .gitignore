@@ -54,3 +54,6 @@ pnpm-debug.log*
 # test output
 coverage/
 docs/
+
+# todo-list
+TODO.md
