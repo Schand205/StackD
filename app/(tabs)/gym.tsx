@@ -132,7 +132,7 @@ function DayCell({ label, templateName, isSelected, isToday, logged, onPress, on
       delayLongPress={350}
     >
       <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-        {isToday ? 'heute' : label}
+        {isToday ? 'Heute' : label}
       </Text>
 
       {templateName !== null ? (
@@ -232,8 +232,9 @@ function PRToast({ exerciseName, weight }: { exerciseName: string; weight: numbe
 // ─── Gym Screen ───────────────────────────────────────────────────────────────
 
 const TAB_ROUTES: Record<string, string> = {
-  feed: '/(tabs)/',
-  gym:  '/(tabs)/gym',
+  feed:     '/(tabs)/',
+  gym:      '/(tabs)/gym',
+  kalorien: '/(tabs)/calories',
 }
 
 export default function GymScreen() {

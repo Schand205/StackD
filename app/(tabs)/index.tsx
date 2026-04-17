@@ -16,8 +16,9 @@ import { QuickLogSheet } from '@/components/shared/QuickLogSheet';
 // ─── Feed Screen ──────────────────────────────────────────────────────────────
 
 const TAB_ROUTES: Record<string, string> = {
-  feed: '/(tabs)/',
-  gym:  '/(tabs)/gym',
+  feed:     '/(tabs)/',
+  gym:      '/(tabs)/gym',
+  kalorien: '/(tabs)/calories',
 };
 
 export default function FeedScreen() {

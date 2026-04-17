@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Provider as JotaiProvider } from 'jotai';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GymProvider } from '@/context/GymContext';
@@ -16,6 +17,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <JotaiProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <GymProvider>
           <Stack>
@@ -26,6 +28,7 @@ export default function RootLayout() {
         </GymProvider>
         <StatusBar style="auto" />
       </ThemeProvider>
+      </JotaiProvider>
     </GestureHandlerRootView>
   );
 }
