@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   ringContainer: { width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
   ringCenter:   { position: 'absolute', alignItems: 'center' },
   ringKcal:     { fontSize: FS.large, fontWeight: '700', color: colors.textPrimary, lineHeight: FS.large * 1.1 },
-  ringLabel:    { fontSize: FS.tiny, color: colors.textTertiary, marginTop: 1 },
+  ringLabel:    { fontSize: FS.small, color: colors.textTertiary, marginTop: 1 },
 
   // Stats
   statsCol:      { flex: 1, gap: 8 },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   // Macros
   macroRow:    { flexDirection: 'row', gap: 8 },
   macroPill:   { flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 10, padding: 8, gap: 4 },
-  macroLabel:  { fontSize: FS.tiny, color: colors.textTertiary },
+  macroLabel:  { fontSize: FS.small, color: colors.textTertiary },
   macroBar:    { height: 3, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' },
   macroBarFill: { height: 3, borderRadius: 2 },
   macroValue:  { fontSize: FS.small, marginTop: 1 },

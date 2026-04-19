@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
@@ -41,6 +41,9 @@ export type Props = {
   kalorien: KalorienStats;
   zielCheck: ZielCheck;
   week: readonly number[];
+  onGymPress?: () => void;
+  onKalorienPress?: () => void;
+  onZielPress?: () => void;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -50,7 +53,7 @@ const TODAY_INDEX = 2; // Wednesday (mock data)
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function ProgressCard({ gym, kalorien, zielCheck, week }: Props) {
+export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKalorienPress, onZielPress }: Props) {
   return (
     <View style={styles.outerCard}>
       <Text style={styles.sectionTitle}>Dein heutiger Stand</Text>
@@ -63,9 +66,9 @@ export function ProgressCard({ gym, kalorien, zielCheck, week }: Props) {
         decelerationRate="fast"
         contentContainerStyle={styles.cardsRow}
       >
-        <GymCard gym={gym} />
-        <KalorienCard kal={kalorien} />
-        <ZielCheckCard ziel={zielCheck} />
+        <GymCard gym={gym} onPress={onGymPress} />
+        <KalorienCard kal={kalorien} onPress={onKalorienPress} />
+        <ZielCheckCard ziel={zielCheck} onPress={onZielPress} />
       </ScrollView>
 
       {/* ── Week bar ── */}
@@ -76,7 +79,7 @@ export function ProgressCard({ gym, kalorien, zielCheck, week }: Props) {
 
 // ─── Gym Card ────────────────────────────────────────────────────────────────
 
-function GymCard({ gym }: { gym: GymStats }) {
+function GymCard({ gym, onPress }: { gym: GymStats; onPress?: () => void }) {
   const dots = Array.from({ length: gym.weekGoal }, (_, i) => {
     if (i < gym.weekDone) return 'done' as const;
     if (i === gym.weekDone) return 'active' as const;
@@ -84,7 +87,7 @@ function GymCard({ gym }: { gym: GymStats }) {
   });
 
   return (
-    <View style={styles.statCard}>
+    <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
       <Text style={styles.cardLabel}>Gym</Text>
       <View style={styles.gymBadge}>
         <Text style={styles.gymBadgeText}>{gym.restDay ? 'Ruhetag' : 'Training'}</Text>
@@ -113,13 +116,13 @@ function GymCard({ gym }: { gym: GymStats }) {
         ))}
       </View>
       <Text style={styles.cardSub}>{gym.nextDay} nächstes</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 // ─── Kalorien Card ───────────────────────────────────────────────────────────
 
-function KalorienCard({ kal }: { kal: KalorienStats }) {
+function KalorienCard({ kal, onPress }: { kal: KalorienStats; onPress?: () => void }) {
   const calPct    = Math.min(kal.current / kal.goal, 1);
   const remaining = kal.goal - kal.current;
   const pPct = Math.min(kal.protein.current / kal.protein.goal, 1);
@@ -127,7 +130,7 @@ function KalorienCard({ kal }: { kal: KalorienStats }) {
   const fPct = Math.min(kal.fat.current / kal.fat.goal, 1);
 
   return (
-    <View style={styles.statCard}>
+    <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
       <Text style={styles.cardLabel}>Kalorien</Text>
       <Text style={styles.calValue}>{kal.current.toLocaleString('de-DE')}</Text>
       <Text style={styles.calSub}>/ {kal.goal.toLocaleString('de-DE')} kcal</Text>
@@ -146,7 +149,7 @@ function KalorienCard({ kal }: { kal: KalorienStats }) {
       </View>
 
       <Text style={[styles.cardSub, { marginTop: 3 }]}>{remaining} kcal übrig</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -175,9 +178,9 @@ function MacroCol({
 
 // ─── Ziel-Check Card ──────────────────────────────────────────────────────────
 
-function ZielCheckCard({ ziel }: { ziel: ZielCheck }) {
+function ZielCheckCard({ ziel, onPress }: { ziel: ZielCheck; onPress?: () => void }) {
   return (
-    <View style={styles.statCard}>
+    <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
       <Text style={styles.cardLabel}>{ziel.name}</Text>
       <View style={styles.zielItems}>
         {ziel.items.map((item, i) => {
@@ -206,7 +209,7 @@ function ZielCheckCard({ ziel }: { ziel: ZielCheck }) {
           );
         })}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardSub: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     color: colors.textTertiary,
   },
   cardValue: {
@@ -320,7 +323,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   gymBadgeText: {
-    fontSize: 8,
+    fontSize: FS.small,
     color: colors.textSecondary,
   },
   gymDotsRow: {
@@ -377,11 +380,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   macroLabel: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     color: colors.textTertiary,
   },
   macroValue: {
-    fontSize: FS.tiny * 1.15,
+    fontSize: FS.small,
     fontWeight: '500',
     color: colors.textPrimary,
     marginVertical: 2,
@@ -412,12 +415,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   zielLabel: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     color: colors.textPrimary,
     fontWeight: '500',
   },
   zielValue: {
-    fontSize: FS.tiny,
+    fontSize: FS.small,
     marginTop: 1,
   },
 

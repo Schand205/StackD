@@ -58,15 +58,20 @@ export default function FeedScreen() {
           kalorien={mockStats.kalorien}
           zielCheck={mockStats.zielCheck}
           week={mockStats.week}
+          onGymPress={() => router.navigate('/(tabs)/gym' as never)}
+          onKalorienPress={() => router.navigate('/(tabs)/calories' as never)}
+          onZielPress={() => router.push({ pathname: '/(tabs)/gym' as any, params: { section: 'ziel' } })}
         />
 
         {/* Friends Row */}
         <View style={styles.friendsSection}>
           <View style={styles.friendsHeader}>
             <Text style={styles.friendsTitle}>FREUNDE HEUTE</Text>
-            <Text style={styles.friendsActive}>
-              {activeCount} von {mockFriends.length} aktiv
-            </Text>
+            <TouchableOpacity onPress={() => router.push('/profil/freunde' as never)} hitSlop={8}>
+              <Text style={styles.friendsActive}>
+                {activeCount} von {mockFriends.length} aktiv →
+              </Text>
+            </TouchableOpacity>
           </View>
           <ScrollView
             horizontal
@@ -84,7 +89,13 @@ export default function FeedScreen() {
 
         {/* Activity Cards */}
         {mockActivities.map(activity => (
-          <ActivityCard key={activity.id} activity={activity} />
+          <ActivityCard
+            key={activity.id}
+            activity={activity}
+            onPress={() => router.navigate(
+              activity.type === 'gym' ? '/(tabs)/gym' as never : '/(tabs)/calories' as never
+            )}
+          />
         ))}
       </ScrollView>
 
