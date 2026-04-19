@@ -39,7 +39,8 @@ export const mockActivities = [
 
 import type { MealEntry } from '@/types/nutrition'
 
-const TODAY = new Date().toISOString().split('T')[0]
+const _d = new Date()
+const TODAY = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`
 
 export const MOCK_ENTRIES: MealEntry[] = [
   { id: 'e1', date: TODAY, mealType: 'breakfast', name: 'Haferflocken',     kcal: 320, protein: 12, carbs: 54, fat: 6,  source: 'manual' },
@@ -57,6 +58,29 @@ export const mockMacroGoals = {
   carbs:   { goal: 300 },
   fat:     { goal: 70  },
 }
+
+export const mockProfil = {
+  name:         'Max Hildebrand',
+  initials:     'MH',
+  memberSince:  'März 2024',
+  weight:       82.5,   // kg
+  height:       181,    // cm
+  age:          24,
+  gender:       'Männlich',
+  goal: {
+    type:          'Lean Bulk',
+    kcal:          2600,
+    weightGoalKg:  85,
+    protein:       160,
+    kcalRatio:     0.72,
+    weightRatio:   0.35,
+    proteinRatio:  0.58,
+  },
+  trainingDays:          ['Mo', 'Mi', 'Do', 'Sa'] as string[],
+  weekGoal:              4,
+  appleHealthConnected:  true,
+  friendCount:           4,
+} as const
 
 export const mockStats = {
   gym: {

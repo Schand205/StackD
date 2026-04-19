@@ -19,6 +19,7 @@ const TAB_ROUTES: Record<string, string> = {
   feed:     '/(tabs)/',
   gym:      '/(tabs)/gym',
   kalorien: '/(tabs)/calories',
+  profil:   '/(tabs)/profil',
 };
 
 export default function FeedScreen() {

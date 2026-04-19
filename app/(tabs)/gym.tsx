@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -30,6 +30,7 @@ const AMBER_PR      = '#ba7517'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WEEK_KEYS: WeekDay[] = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const ZIEL_CARD_HEIGHT = 128
 
 // Today = Tuesday (index 1) for demo — April 15, 2026
 const TODAY_IDX = 1
@@ -235,12 +236,18 @@ const TAB_ROUTES: Record<string, string> = {
   feed:     '/(tabs)/',
   gym:      '/(tabs)/gym',
   kalorien: '/(tabs)/calories',
+  profil:   '/(tabs)/profil',
 }
 
 export default function GymScreen() {
   const { bottom } = useSafeAreaInsets()
   const router = useRouter()
   const tabBarHeight = 45 + (bottom > 0 ? bottom : 12)
+
+  const scrollRef        = useRef<ScrollView>(null)
+  const [trainingsplanY, setTrainingsplanY] = useState(0)
+
+  const { section } = useLocalSearchParams<{ section?: string }>()
 
   // ── Week plan ──
   const [weekPlan, setWeekPlan] = useState<WeekPlan>({ ...mockWeekPlan })
@@ -272,6 +279,17 @@ export default function GymScreen() {
     })
   }, [])
 
+  // ── Section scroll from query param ──
+  useEffect(() => {
+    if (!section) return
+    const timer = setTimeout(() => {
+      if (section === 'trainingsplan') {
+        scrollRef.current?.scrollTo({ y: trainingsplanY, animated: true })
+      }
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [section, trainingsplanY])
+
   // ── PR Toast ──
   const [showPRToast, setShowPRToast] = useState(false)
   const [prToastData, setPRToastData] = useState<{ exerciseName: string; weight: number } | null>(null)
@@ -288,7 +306,18 @@ export default function GymScreen() {
   const currentTemplate = currentTemplateId
     ? userTemplates.find(t => t.id === currentTemplateId) ?? null
     : null
-  const exercises = currentTemplateId ? (exerciseData[currentTemplateId] ?? []) : []
+  // Derive from template's exercise list so newly added/edited exercises always appear.
+  // Merge stored set-logs from exerciseData where available.
+  const exercises: ExerciseState[] = currentTemplate
+    ? currentTemplate.exercises.map(ex => {
+        const stored = (exerciseData[currentTemplateId!] ?? []).find(e => e.id === ex.id)
+        return stored ?? {
+          id: ex.id, name: ex.name,
+          lastWeight: 0, lastSets: ex.defaultSets, lastReps: ex.defaultReps,
+          sets: [], pr: false,
+        }
+      })
+    : []
 
   const headerLabel = selectedDay === TODAY_IDX
     ? `Heute – ${currentTemplate?.name ?? 'Ruhetag'}`
@@ -413,36 +442,9 @@ export default function GymScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Week Strip ── */}
-      <View style={styles.weekStrip}>
-        {WEEK_KEYS.map((weekDay, idx) => {
-          const tId       = weekPlan[weekDay]
-          const tName     = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
-          const logged    = tId ? (exerciseData[tId] ?? []).some(ex => ex.sets.length > 0) : false
-
-          return (
-            <DayCell
-              key={weekDay}
-              label={weekDay}
-              templateName={tName}
-              isSelected={selectedDay === idx}
-              isToday={idx === TODAY_IDX}
-              logged={logged}
-              onPress={() => handleDayTap(idx)}
-              onLongPress={() => handleDayLongPress(idx)}
-            />
-          )
-        })}
-      </View>
-
-      {/* ── Long-press hint ── */}
-      {showLongPressHint && (
-        <Text style={styles.longPressHint}>Gedrückt halten zum Planen</Text>
-      )}
-
-      {/* ── PR Toast ── */}
+      {/* ── PR Toast (fixed overlay) ── */}
       {showPRToast && prToastData && (
-        <Animated.View style={[styles.prToastWrap, { opacity: toastOpacity }]}>
+        <Animated.View style={[styles.prToastWrap, { opacity: toastOpacity }]} pointerEvents="none">
           <PRToast
             exerciseName={prToastData.exerciseName}
             weight={prToastData.weight}
@@ -450,12 +452,41 @@ export default function GymScreen() {
         </Animated.View>
       )}
 
-      {/* ── Exercise List ── */}
+      {/* ── Scrollable content ── */}
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + ZIEL_CARD_HEIGHT + 24 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Trainingsplan section ── */}
+        <View onLayout={e => setTrainingsplanY(e.nativeEvent.layout.y)}>
+          <Text style={styles.sectionLabel}>Trainingsplan</Text>
+          <View style={styles.weekStrip}>
+            {WEEK_KEYS.map((weekDay, idx) => {
+              const tId    = weekPlan[weekDay]
+              const tName  = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
+              const logged = tId ? (exerciseData[tId] ?? []).some(ex => ex.sets.length > 0) : false
+              return (
+                <DayCell
+                  key={weekDay}
+                  label={weekDay}
+                  templateName={tName}
+                  isSelected={selectedDay === idx}
+                  isToday={idx === TODAY_IDX}
+                  logged={logged}
+                  onPress={() => handleDayTap(idx)}
+                  onLongPress={() => handleDayLongPress(idx)}
+                />
+              )
+            })}
+          </View>
+          {showLongPressHint && (
+            <Text style={styles.longPressHint}>Gedrückt halten zum Planen</Text>
+          )}
+        </View>
+
+        {/* ── Tagesansicht ── */}
         <Text style={styles.sectionTitle}>{headerLabel}</Text>
 
         {exercises.length === 0 ? (
@@ -472,7 +503,38 @@ export default function GymScreen() {
             />
           ))
         )}
+
       </ScrollView>
+
+      {/* ── Dein Ziel (fixed above TabBar) ── */}
+      <View style={[styles.zielCard, { marginBottom: tabBarHeight }]}>
+        <Text style={styles.sectionLabel}>Dein Ziel</Text>
+        <View style={styles.zielRow}>
+          <View style={styles.zielTile}>
+            <Text style={styles.zielTileValue}>{currentSplit}</Text>
+            <Text style={styles.zielTileLabel}>Split</Text>
+          </View>
+          <View style={styles.zielDivider} />
+          <View style={styles.zielTile}>
+            <Text style={styles.zielTileValue}>
+              {Object.values(weekPlan).filter(Boolean).length}×
+            </Text>
+            <Text style={styles.zielTileLabel}>pro Woche</Text>
+          </View>
+          <View style={styles.zielDivider} />
+          <View style={styles.zielTile}>
+            <Text style={styles.zielTileValue}>{userTemplates.length}</Text>
+            <Text style={styles.zielTileLabel}>Templates</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.zielBtn}
+          onPress={() => setSplitSheetVisible(true)}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.zielBtnText}>Split ändern</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* ── SetEntrySheet ── */}
       <SetEntrySheet
@@ -632,8 +694,11 @@ const styles = StyleSheet.create({
 
   // ── PR Toast ──
   prToastWrap: {
-    marginHorizontal: SP.outer,
-    marginBottom: SP.gap,
+    position: 'absolute',
+    top: 120,
+    left: SP.outer,
+    right: SP.outer,
+    zIndex: 99,
   },
   prToast: {
     flexDirection: 'row',
@@ -763,5 +828,63 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: FS.body,
     color: colors.textTertiary,
+  },
+
+  // ── Section Label ──
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: SP.gap,
+  },
+
+  // ── Ziel Card ──
+  zielCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: '#e8e8e6',
+    padding: SP.card * 1.2,
+    marginHorizontal: SP.outer,
+    marginTop: SP.gap,
+    gap: SP.gap * 1.5,
+  },
+  zielRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  zielTile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  zielTileValue: {
+    fontSize: FS.large,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  zielTileLabel: {
+    fontSize: FS.small,
+    color: colors.textTertiary,
+  },
+  zielDivider: {
+    width: 0.5,
+    height: 32,
+    backgroundColor: colors.border,
+  },
+  zielBtn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  zielBtnText: {
+    fontSize: FS.body,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 })

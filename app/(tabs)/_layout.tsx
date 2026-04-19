@@ -7,6 +7,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="gym" />
       <Tabs.Screen name="calories" />
+      <Tabs.Screen name="profil" />
     </Tabs>
   );
 }
