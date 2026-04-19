@@ -36,11 +36,13 @@ export type ZielCheck = {
   readonly items: readonly ZielItem[];
 };
 
+export type WeekDay = { pct: number; isToday: boolean };
+
 export type Props = {
   gym: GymStats;
   kalorien: KalorienStats;
   zielCheck: ZielCheck;
-  week: readonly number[];
+  week: readonly WeekDay[];
   onGymPress?: () => void;
   onKalorienPress?: () => void;
   onZielPress?: () => void;
@@ -49,7 +51,6 @@ export type Props = {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const WEEK_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const TODAY_INDEX = 2; // Wednesday (mock data)
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -217,29 +218,25 @@ function ZielCheckCard({ ziel, onPress }: { ziel: ZielCheck; onPress?: () => voi
 
 const MAX_BAR_HEIGHT = 26;
 
-function WeekBar({ week }: { week: readonly number[] }) {
+function getBarColor(pct: number): string {
+  if (pct === 0)              return colors.bgSecondary
+  if (pct >= 95 && pct <= 105) return '#C0DD97'
+  if (pct < 95)               return '#AFA9EC'
+  return '#EF9F27'
+}
+
+function WeekBar({ week }: { week: readonly WeekDay[] }) {
   return (
     <View style={styles.weekBar}>
-      {week.map((pct, i) => {
-        const isToday = i === TODAY_INDEX;
-        const fillHeight = Math.round((pct / 100) * MAX_BAR_HEIGHT);
-
-        let fillColor: string = colors.green;
-        if (isToday) fillColor = '#AFA9EC';
-        else if (pct < 100) fillColor = colors.gray;
+      {week.map(({ pct, isToday }, i) => {
+        const fillHeight = Math.round((Math.min(pct, 120) / 120) * MAX_BAR_HEIGHT);
+        const fillColor  = getBarColor(pct);
 
         return (
           <View key={i} style={styles.weekCol}>
-            {/* Background track */}
             <View style={[styles.weekBlock, isToday && styles.weekBlockToday]}>
-              {/* Fill — anchored to bottom */}
               {pct > 0 && (
-                <View
-                  style={[
-                    styles.weekFill,
-                    { height: fillHeight, backgroundColor: fillColor },
-                  ]}
-                />
+                <View style={[styles.weekFill, { height: fillHeight, backgroundColor: fillColor }]} />
               )}
             </View>
             <Text style={[styles.weekLabel, isToday && styles.weekLabelToday]}>

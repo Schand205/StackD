@@ -106,5 +106,13 @@ export const mockStats = {
       { label: 'Kalorien-Schnitt', value: '1.980 · zu wenig',   status: 'warn' },
     ],
   },
-  week: [100, 85, 60, 90, 40, 0, 0], // Mo–So, % gefüllt
+  week: [
+    { pct: 98,  isToday: false },  // Mo — grün
+    { pct: 72,  isToday: false },  // Di — lila
+    { pct: 102, isToday: false },  // Mi — grün
+    { pct: 115, isToday: false },  // Do — amber
+    { pct: 60,  isToday: true  },  // Fr — heute, lila
+    { pct: 0,   isToday: false },  // Sa — leer
+    { pct: 0,   isToday: false },  // So — leer
+  ],
 } as const;

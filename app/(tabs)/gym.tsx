@@ -6,6 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
+import { useAtom } from 'jotai'
+import { exerciseDataAtom, weekPlanAtom, WEEK_KEYS, TODAY_IDX } from '@/atoms/gymAtoms'
+import type { ExerciseState, SetEntry } from '@/atoms/gymAtoms'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -15,9 +18,9 @@ import { TabBar } from '@/components/common/TabBar'
 import { SetEntrySheet } from '@/components/gym/SetEntrySheet'
 import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
-import { mockWeekPlan, defaultTemplatesPerSplit } from '@/data/mockGymData'
+import { defaultTemplatesPerSplit } from '@/data/mockGymData'
 import { useGymContext } from '@/context/GymContext'
-import type { WeekDay, WeekPlan, Template, WorkoutSplit } from '@/types/gym'
+import type { WeekDay, Template, WorkoutSplit } from '@/types/gym'
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 
@@ -29,11 +32,8 @@ const AMBER_PR      = '#ba7517'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WEEK_KEYS: WeekDay[] = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const ZIEL_CARD_HEIGHT = 128
 
-// Today = Tuesday (index 1) for demo — April 15, 2026
-const TODAY_IDX = 1
 
 const MONTH_NAMES = [
   'Januar','Februar','März','April','Mai','Juni',
@@ -49,18 +49,6 @@ function getDayLabel(dayIndex: number): string {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SetEntry = { weight: number; reps: number }
-
-type ExerciseState = {
-  id: string
-  name: string
-  lastWeight: number
-  lastSets: number
-  lastReps: number
-  sets: SetEntry[]
-  pr: boolean
-}
-
 type SelectedExercise = {
   exerciseId: string
   setNumber: number
@@ -70,26 +58,6 @@ type SelectedExercise = {
 type AssignSheetState = {
   weekDay: WeekDay
   index: number
-}
-
-// ─── Initial Exercise Data (keyed by templateId) ──────────────────────────────
-
-const INITIAL_EXERCISES: Record<string, ExerciseState[]> = {
-  tmpl_push: [
-    { id: 'p1', name: 'Bankdrücken',      lastWeight: 80,   lastSets: 5, lastReps: 5,  sets: [{ weight: 82.5, reps: 5 }, { weight: 82.5, reps: 5 }, { weight: 82.5, reps: 4 }], pr: true  },
-    { id: 'p2', name: 'Schulterdrücken',  lastWeight: 55,   lastSets: 4, lastReps: 8,  sets: [{ weight: 57.5, reps: 8 }, { weight: 57.5, reps: 7 }], pr: false },
-    { id: 'p3', name: 'Trizeps Pushdown', lastWeight: 30,   lastSets: 3, lastReps: 12, sets: [], pr: false },
-  ],
-  tmpl_pull: [
-    { id: 'pu1', name: 'Klimmzüge',        lastWeight: 0,    lastSets: 4, lastReps: 6,  sets: [], pr: false },
-    { id: 'pu2', name: 'Langhantelrudern', lastWeight: 75,   lastSets: 4, lastReps: 8,  sets: [], pr: false },
-    { id: 'pu3', name: 'Bizeps Curl',      lastWeight: 22.5, lastSets: 3, lastReps: 10, sets: [], pr: false },
-  ],
-  tmpl_legs: [
-    { id: 'b1', name: 'Kniebeuge',          lastWeight: 100, lastSets: 5, lastReps: 5,  sets: [], pr: false },
-    { id: 'b2', name: 'Beinpresse',         lastWeight: 160, lastSets: 4, lastReps: 10, sets: [], pr: false },
-    { id: 'b3', name: 'Wadenheben',         lastWeight: 80,  lastSets: 4, lastReps: 15, sets: [], pr: false },
-  ],
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -230,6 +198,44 @@ function PRToast({ exerciseName, weight }: { exerciseName: string; weight: numbe
   )
 }
 
+// ─── WeightProgressCard ───────────────────────────────────────────────────────
+
+function WeightProgressCard({ exerciseData }: { exerciseData: Record<string, ExerciseState[]> }) {
+  const prExercises = Object.values(exerciseData)
+    .flat()
+    .filter(e => e.pr && e.sets.length > 0)
+
+  if (prExercises.length === 0) return null
+
+  return (
+    <View style={styles.weightCard}>
+      <Text style={styles.sectionLabel}>Gewichtsfortschritt heute</Text>
+      {prExercises.map(ex => {
+        const maxWeight = Math.max(...ex.sets.map(s => s.weight))
+        const delta = maxWeight - ex.lastWeight
+        return (
+          <View key={ex.id} style={styles.weightRow}>
+            <View style={styles.weightLeft}>
+              <Text style={styles.weightName}>{ex.name}</Text>
+              <Text style={styles.weightSub}>
+                vorher {fmtWeight(ex.lastWeight)}
+              </Text>
+            </View>
+            <View style={styles.weightRight}>
+              <Text style={styles.weightValue}>{fmtWeight(maxWeight)}</Text>
+              {delta > 0 && (
+                <View style={styles.weightDeltaBadge}>
+                  <Text style={styles.weightDeltaText}>+{delta} kg</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )
+      })}
+    </View>
+  )
+}
+
 // ─── Gym Screen ───────────────────────────────────────────────────────────────
 
 const TAB_ROUTES: Record<string, string> = {
@@ -249,14 +255,12 @@ export default function GymScreen() {
 
   const { section } = useLocalSearchParams<{ section?: string }>()
 
-  // ── Week plan ──
-  const [weekPlan, setWeekPlan] = useState<WeekPlan>({ ...mockWeekPlan })
+  // ── Week plan + exercise data from shared atoms ──
+  const [weekPlan,     setWeekPlan]     = useAtom(weekPlanAtom)
+  const [exerciseData, setExerciseData] = useAtom(exerciseDataAtom)
 
   // ── Selected day ──
   const [selectedDay, setSelectedDay] = useState(TODAY_IDX)
-
-  // ── Exercise data, keyed by templateId ──
-  const [exerciseData, setExerciseData] = useState<Record<string, ExerciseState[]>>(INITIAL_EXERCISES)
 
   // ── SetEntrySheet ──
   const [entrySheetVisible, setEntrySheetVisible] = useState(false)
@@ -503,6 +507,8 @@ export default function GymScreen() {
             />
           ))
         )}
+
+        <WeightProgressCard exerciseData={exerciseData} />
 
       </ScrollView>
 
@@ -886,5 +892,48 @@ const styles = StyleSheet.create({
     fontSize: FS.body,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+
+  // ── Weight Progress Card ──
+  weightCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: '#e8e8e6',
+    padding: SP.card * 1.2,
+    marginBottom: SP.gap * 1.8,
+    gap: SP.gap * 1.5,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weightLeft:  { gap: 2 },
+  weightRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  weightName: {
+    fontSize: FS.body,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  weightSub: {
+    fontSize: FS.small,
+    color: colors.textTertiary,
+  },
+  weightValue: {
+    fontSize: FS.body,
+    fontWeight: '600',
+    color: colors.teal,
+  },
+  weightDeltaBadge: {
+    backgroundColor: colors.tealLight,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  weightDeltaText: {
+    fontSize: FS.small,
+    fontWeight: '600',
+    color: colors.tealDark,
   },
 })
