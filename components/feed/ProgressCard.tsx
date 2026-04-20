@@ -65,6 +65,13 @@ const WEEK_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKalorienPress, onZielPress, onStepsGoalChange }: Props) {
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const { steps } = kalorien;
+  const stepPct      = steps.today / steps.goal;
+  const stepFill     = Math.min(stepPct, 1);
+  const stepBarColor = stepPct > 1.05 ? '#1D9E75' : stepPct >= 0.95 ? '#C0DD97' : stepPct >= 0.7 ? '#AFA9EC' : '#D3D1C7';
+  const showBanner   = steps.suggestionPending && !bannerDismissed;
+
   return (
     <View style={styles.outerCard}>
       <Text style={styles.sectionTitle}>Dein heutiger Stand</Text>
@@ -78,12 +85,43 @@ export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKal
         contentContainerStyle={styles.cardsRow}
       >
         <GymCard gym={gym} onPress={onGymPress} />
-        <KalorienCard kal={kalorien} onPress={onKalorienPress} onStepsGoalChange={onStepsGoalChange} />
+        <KalorienCard kal={kalorien} onPress={onKalorienPress} />
         <ZielCheckCard ziel={zielCheck} onPress={onZielPress} />
       </ScrollView>
 
       {/* ── Week bar ── */}
       <WeekBar week={week} />
+
+      {/* ── Schritte ── */}
+      <View style={styles.stepsSection}>
+        <Ionicons name="walk-outline" size={12} color={colors.textTertiary} />
+        <View style={styles.stepsMiddle}>
+          <Text style={styles.stepsLabel}>Schritte heute</Text>
+          <View style={styles.stepsBarTrack}>
+            <View style={{ flex: stepFill, backgroundColor: stepBarColor, borderRadius: 2 }} />
+            <View style={{ flex: 1 - stepFill }} />
+          </View>
+        </View>
+        <Text style={styles.stepsValue}>
+          {steps.today.toLocaleString('de-DE')} / {steps.goal.toLocaleString('de-DE')} · Ø {steps.avgLast4Weeks.toLocaleString('de-DE')}
+        </Text>
+      </View>
+
+      {showBanner && (
+        <View style={styles.stepsBanner}>
+          <Text style={styles.stepsBannerText} numberOfLines={2}>
+            {'Ziel anpassen auf '}{steps.suggestedGoal.toLocaleString('de-DE')}{'? Dein Schnitt liegt bei '}{steps.avgLast4Weeks.toLocaleString('de-DE')}
+          </Text>
+          <View style={styles.stepsBannerActions}>
+            <TouchableOpacity onPress={() => { onStepsGoalChange?.(steps.suggestedGoal); setBannerDismissed(true); }}>
+              <Text style={styles.stepsBannerYes}>Ja</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setBannerDismissed(true)}>
+              <Text style={styles.stepsBannerNo}>Nein</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -133,20 +171,12 @@ function GymCard({ gym, onPress }: { gym: GymStats; onPress?: () => void }) {
 
 // ─── Kalorien Card ───────────────────────────────────────────────────────────
 
-function KalorienCard({ kal, onPress, onStepsGoalChange }: { kal: KalorienStats; onPress?: () => void; onStepsGoalChange?: (newGoal: number) => void }) {
+function KalorienCard({ kal, onPress }: { kal: KalorienStats; onPress?: () => void }) {
   const calPct    = Math.min(kal.current / kal.goal, 1);
   const remaining = kal.goal - kal.current;
   const pPct = Math.min(kal.protein.current / kal.protein.goal, 1);
   const kPct = Math.min(kal.carbs.current / kal.carbs.goal, 1);
   const fPct = Math.min(kal.fat.current / kal.fat.goal, 1);
-
-  const { steps } = kal;
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  const stepPct      = steps.today / steps.goal;
-  const stepFill     = Math.min(stepPct, 1);
-  const stepBarColor = stepPct >= 1 ? '#C0DD97' : stepPct >= 0.7 ? '#AFA9EC' : '#D3D1C7';
-  const showBanner   = steps.suggestionPending && !bannerDismissed;
 
   return (
     <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
@@ -168,40 +198,6 @@ function KalorienCard({ kal, onPress, onStepsGoalChange }: { kal: KalorienStats;
       </View>
 
       <Text style={[styles.cardSub, { marginTop: 3 }]}>{remaining} kcal übrig</Text>
-
-      {/* ── Schritte ── */}
-      <View style={styles.stepsDivider} />
-
-      <View style={styles.stepsRow}>
-        <View style={styles.stepsLeft}>
-          <Ionicons name="walk-outline" size={12} color={colors.textTertiary} />
-          <Text style={styles.stepsLabel}>Schritte</Text>
-        </View>
-        <Text style={styles.stepsValue}>
-          {steps.today.toLocaleString('de-DE')} / {steps.goal.toLocaleString('de-DE')}
-        </Text>
-      </View>
-
-      <View style={styles.stepsBarTrack}>
-        <View style={{ flex: stepFill, backgroundColor: stepBarColor, borderRadius: 2 }} />
-        <View style={{ flex: 1 - stepFill }} />
-      </View>
-
-      {showBanner && (
-        <View style={styles.stepsBanner}>
-          <Text style={styles.stepsBannerText} numberOfLines={2}>
-            {'Ziel anpassen auf '}{steps.suggestedGoal.toLocaleString('de-DE')}{'? Dein Schnitt liegt bei '}{steps.avgLast4Weeks.toLocaleString('de-DE')}
-          </Text>
-          <View style={styles.stepsBannerActions}>
-            <TouchableOpacity onPress={() => { onStepsGoalChange?.(steps.suggestedGoal); setBannerDismissed(true); }}>
-              <Text style={styles.stepsBannerYes}>Ja</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setBannerDismissed(true)}>
-              <Text style={styles.stepsBannerNo}>Nein</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
@@ -268,7 +264,7 @@ function ZielCheckCard({ ziel, onPress }: { ziel: ZielCheck; onPress?: () => voi
 
 // ─── Week Bar ─────────────────────────────────────────────────────────────────
 
-const MAX_BAR_HEIGHT = 26;
+const MAX_BAR_HEIGHT = 22;
 
 function getBarColor(pct: number): string {
   if (pct === 0)              return colors.bgSecondary
@@ -447,29 +443,22 @@ const styles = StyleSheet.create({
   },
 
   // Schritte
-  stepsDivider: {
-    height: 0.5,
-    backgroundColor: colors.border,
+  stepsSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 10,
-    marginBottom: 8,
   },
-  stepsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  stepsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+  stepsMiddle: {
+    flex: 1,
+    gap: 4,
   },
   stepsLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.textTertiary,
   },
   stepsValue: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.textTertiary,
   },
   stepsBarTrack: {
@@ -478,12 +467,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.bgSecondary,
     overflow: 'hidden',
-    marginBottom: 6,
-  },
-  stepsAvg: {
-    fontSize: 9,
-    color: colors.textTertiary,
-    fontStyle: 'italic',
   },
   stepsBanner: {
     marginTop: 6,
@@ -553,7 +536,7 @@ const styles = StyleSheet.create({
   },
   weekBlock: {
     width: '100%',
-    height: 26,
+    height: 22,
     borderRadius: 4,
     backgroundColor: colors.bgSecondary,
     overflow: 'hidden',
