@@ -66,11 +66,10 @@ export default function FeedScreen() {
   const todayKey        = WEEK_KEYS[TODAY_IDX]
   const todayTemplateId = weekPlan[todayKey] ?? null
   const todayTemplate   = todayTemplateId ? userTemplates.find(t => t.id === todayTemplateId) ?? null : null
-  const todayExercises  = todayTemplateId ? (exerciseData[todayTemplateId] ?? []) : []
+  const todayExercises  = todayTemplateId ? (exerciseData[todayKey] ?? []) : []
 
   const weekDone = WEEK_KEYS.filter(d => {
-    const tid = weekPlan[d]
-    return tid && (exerciseData[tid] ?? []).some(e => e.sets.length > 0)
+    return weekPlan[d] && (exerciseData[d] ?? []).some(e => e.sets.length > 0)
   }).length
   const weekGoal = WEEK_KEYS.filter(d => weekPlan[d] !== null).length
 

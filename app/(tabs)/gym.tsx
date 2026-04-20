@@ -20,7 +20,7 @@ import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
 import { defaultTemplatesPerSplit } from '@/data/mockGymData'
 import { useGymContext } from '@/context/GymContext'
-import type { WeekDay, Template, WorkoutSplit } from '@/types/gym'
+import type { WeekDay, WorkoutSplit } from '@/types/gym'
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 
@@ -65,19 +65,6 @@ type AssignSheetState = {
 function fmtWeight(w: number): string {
   if (w === 0) return 'KG'
   return w % 1 === 0 ? `${w} kg` : `${w.toFixed(1)} kg`
-}
-
-/** Initialize exercise state from a Template when first assigned. */
-function initExercisesFromTemplate(template: Template): ExerciseState[] {
-  return template.exercises.map(ex => ({
-    id: ex.id,
-    name: ex.name,
-    lastWeight: 0,
-    lastSets: ex.defaultSets,
-    lastReps: ex.defaultReps,
-    sets: [],
-    pr: false,
-  }))
 }
 
 // ─── DayCell ──────────────────────────────────────────────────────────────────
@@ -314,7 +301,7 @@ export default function GymScreen() {
   // Merge stored set-logs from exerciseData where available.
   const exercises: ExerciseState[] = currentTemplate
     ? currentTemplate.exercises.map(ex => {
-        const stored = (exerciseData[currentTemplateId!] ?? []).find(e => e.id === ex.id)
+        const stored = (exerciseData[currentWeekDay] ?? []).find(e => e.id === ex.id)
         return stored ?? {
           id: ex.id, name: ex.name,
           lastWeight: 0, lastSets: ex.defaultSets, lastReps: ex.defaultReps,
@@ -376,15 +363,7 @@ export default function GymScreen() {
     setWeekPlan(prev => ({ ...prev, [day]: templateId }))
 
     // Initialize exercise data for newly assigned template if not already present
-    if (templateId && !exerciseData[templateId]) {
-      const template = userTemplates.find(t => t.id === templateId)
-      if (template) {
-        setExerciseData(prev => ({
-          ...prev,
-          [templateId]: initExercisesFromTemplate(template),
-        }))
-      }
-    }
+    // No pre-initialization needed — exercises are derived from template at render time.
   }
 
   function handleAddSet(exerciseId: string, exerciseName: string, setNumber: number) {
@@ -397,7 +376,7 @@ export default function GymScreen() {
 
     setExerciseData(prev => ({
       ...prev,
-      [currentTemplateId]: (prev[currentTemplateId] ?? []).map(ex =>
+      [currentWeekDay]: exercises.map(ex =>
         ex.id === selectedExercise.exerciseId
           ? { ...ex, sets: [...ex.sets, { weight, reps }], pr: ex.pr || isPR }
           : ex
@@ -423,14 +402,14 @@ export default function GymScreen() {
 
   function getLastSetToday(exerciseId: string) {
     if (!currentTemplateId) return undefined
-    const ex = exerciseData[currentTemplateId]?.find(e => e.id === exerciseId)
+    const ex = exerciseData[currentWeekDay]?.find(e => e.id === exerciseId)
     if (!ex || ex.sets.length === 0) return undefined
     return ex.sets[ex.sets.length - 1]
   }
 
   function getPreviousBest(exerciseId: string) {
     if (!currentTemplateId) return undefined
-    return exerciseData[currentTemplateId]?.find(e => e.id === exerciseId)?.lastWeight
+    return exerciseData[currentWeekDay]?.find(e => e.id === exerciseId)?.lastWeight
   }
 
   // ── Render ──
@@ -470,7 +449,7 @@ export default function GymScreen() {
             {WEEK_KEYS.map((weekDay, idx) => {
               const tId    = weekPlan[weekDay]
               const tName  = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
-              const logged = tId ? (exerciseData[tId] ?? []).some(ex => ex.sets.length > 0) : false
+              const logged = tId ? (exerciseData[weekDay] ?? []).some(ex => ex.sets.length > 0) : false
               return (
                 <DayCell
                   key={weekDay}

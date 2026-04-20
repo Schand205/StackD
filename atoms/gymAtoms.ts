@@ -21,23 +21,17 @@ export type ExerciseState = {
 export const WEEK_KEYS: WeekDay[] = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 export const TODAY_IDX = 1  // Demo: Tuesday
 
-// ─── Initial exercise data (keyed by templateId) ──────────────────────────────
+// ─── Initial exercise data (keyed by WeekDay) ────────────────────────────────
+// Each day gets its own log so the same template can be used on multiple days.
 
 const INITIAL_EXERCISES: Record<string, ExerciseState[]> = {
-  tmpl_push: [
-    { id: 'p1', name: 'Bankdrücken',      lastWeight: 80,   lastSets: 5, lastReps: 5,  sets: [{ weight: 82.5, reps: 5 }, { weight: 82.5, reps: 5 }, { weight: 82.5, reps: 4 }], pr: true  },
-    { id: 'p2', name: 'Schulterdrücken',  lastWeight: 55,   lastSets: 4, lastReps: 8,  sets: [{ weight: 57.5, reps: 8 }, { weight: 57.5, reps: 7 }], pr: false },
-    { id: 'p3', name: 'Trizeps Pushdown', lastWeight: 30,   lastSets: 3, lastReps: 12, sets: [], pr: false },
-  ],
-  tmpl_pull: [
-    { id: 'pu1', name: 'Klimmzüge',        lastWeight: 0,    lastSets: 4, lastReps: 6,  sets: [], pr: false },
-    { id: 'pu2', name: 'Langhantelrudern', lastWeight: 75,   lastSets: 4, lastReps: 8,  sets: [], pr: false },
-    { id: 'pu3', name: 'Bizeps Curl',      lastWeight: 22.5, lastSets: 3, lastReps: 10, sets: [], pr: false },
-  ],
-  tmpl_legs: [
-    { id: 'b1', name: 'Kniebeuge',  lastWeight: 100, lastSets: 5, lastReps: 5,  sets: [], pr: false },
-    { id: 'b2', name: 'Beinpresse', lastWeight: 160, lastSets: 4, lastReps: 10, sets: [], pr: false },
-    { id: 'b3', name: 'Wadenheben', lastWeight: 80,  lastSets: 4, lastReps: 15, sets: [], pr: false },
+  // Monday — Push session (already done, demo history)
+  Mo: [
+    { id: 'e_bench',   name: 'Bankdrücken',      lastWeight: 77.5, lastSets: 4, lastReps: 8,  sets: [{ weight: 80, reps: 8 }, { weight: 80, reps: 8 }, { weight: 80, reps: 7 }, { weight: 80, reps: 7 }], pr: true  },
+    { id: 'e_ohp',     name: 'OHP',              lastWeight: 52.5, lastSets: 3, lastReps: 8,  sets: [{ weight: 55, reps: 8 }, { weight: 55, reps: 8 }, { weight: 55, reps: 7 }], pr: false },
+    { id: 'e_dips',    name: 'Dips',             lastWeight: 0,    lastSets: 3, lastReps: 10, sets: [], pr: false },
+    { id: 'e_tpush',   name: 'Trizeps Pushdown', lastWeight: 30,   lastSets: 3, lastReps: 12, sets: [], pr: false },
+    { id: 'e_lateral', name: 'Seitheben',        lastWeight: 10,   lastSets: 3, lastReps: 12, sets: [], pr: false },
   ],
 }
 
