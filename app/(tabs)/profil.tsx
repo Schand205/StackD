@@ -13,7 +13,10 @@ import { GoalCard } from '@/components/profil/GoalCard'
 import { ProfileRowGroup } from '@/components/profil/ProfileRow'
 import { WeightBottomSheet } from '@/components/profil/WeightBottomSheet'
 import { BodyDataBottomSheet, type BodyData } from '@/components/profil/BodyDataBottomSheet'
+import { StepsGoalBottomSheet } from '@/components/profil/StepsGoalBottomSheet'
 import { mockProfil } from '@/constants/mockData'
+import { useAtom } from 'jotai'
+import { stepsGoalAtom } from '@/atoms/stepsAtoms'
 
 // ─── Route map ────────────────────────────────────────────────────────────────
 
@@ -32,6 +35,9 @@ export default function ProfilScreen() {
 
   const [weightSheetVisible,   setWeightSheetVisible]   = useState(false)
   const [bodyDataSheetVisible, setBodyDataSheetVisible] = useState(false)
+  const [stepsSheetVisible,    setStepsSheetVisible]    = useState(false)
+
+  const [stepsGoal, setStepsGoal] = useAtom(stepsGoalAtom)
 
   const p = mockProfil
 
@@ -128,6 +134,14 @@ export default function ProfilScreen() {
             value:     bodyData.gender,
             onPress:   () => setBodyDataSheetVisible(true),
           },
+          {
+            icon:      'walk-outline',
+            iconColor: colors.teal,
+            iconBg:    colors.tealLight,
+            label:     'Schritteziel',
+            value:     `${stepsGoal.toLocaleString('de-DE')} / Tag`,
+            onPress:   () => setStepsSheetVisible(true),
+          },
         ]} />
 
         <Text style={styles.sectionLabel}>Trainingsplan</Text>
@@ -191,6 +205,13 @@ export default function ProfilScreen() {
         current={bodyData}
         onClose={() => setBodyDataSheetVisible(false)}
         onSave={d => { setBodyData(d); setBodyDataSheetVisible(false) }}
+      />
+
+      <StepsGoalBottomSheet
+        visible={stepsSheetVisible}
+        currentGoal={stepsGoal}
+        onClose={() => setStepsSheetVisible(false)}
+        onSave={g => setStepsGoal(g)}
       />
     </SafeAreaView>
   )

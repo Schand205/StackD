@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
@@ -17,12 +17,21 @@ export type GymStats = {
   readonly restDay: boolean;
 };
 
+export type StepsStats = {
+  today: number;
+  goal: number;
+  avgLast4Weeks: number;
+  suggestionPending: boolean;
+  suggestedGoal: number;
+};
+
 export type KalorienStats = {
   readonly current: number;
   readonly goal: number;
   readonly protein: MacroStat;
   readonly carbs: MacroStat;
   readonly fat: MacroStat;
+  readonly steps: StepsStats;
 };
 
 export type ZielItem = {
@@ -46,6 +55,7 @@ export type Props = {
   onGymPress?: () => void;
   onKalorienPress?: () => void;
   onZielPress?: () => void;
+  onStepsGoalChange?: (newGoal: number) => void;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -54,7 +64,7 @@ const WEEK_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKalorienPress, onZielPress }: Props) {
+export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKalorienPress, onZielPress, onStepsGoalChange }: Props) {
   return (
     <View style={styles.outerCard}>
       <Text style={styles.sectionTitle}>Dein heutiger Stand</Text>
@@ -68,7 +78,7 @@ export function ProgressCard({ gym, kalorien, zielCheck, week, onGymPress, onKal
         contentContainerStyle={styles.cardsRow}
       >
         <GymCard gym={gym} onPress={onGymPress} />
-        <KalorienCard kal={kalorien} onPress={onKalorienPress} />
+        <KalorienCard kal={kalorien} onPress={onKalorienPress} onStepsGoalChange={onStepsGoalChange} />
         <ZielCheckCard ziel={zielCheck} onPress={onZielPress} />
       </ScrollView>
 
@@ -123,12 +133,20 @@ function GymCard({ gym, onPress }: { gym: GymStats; onPress?: () => void }) {
 
 // ─── Kalorien Card ───────────────────────────────────────────────────────────
 
-function KalorienCard({ kal, onPress }: { kal: KalorienStats; onPress?: () => void }) {
+function KalorienCard({ kal, onPress, onStepsGoalChange }: { kal: KalorienStats; onPress?: () => void; onStepsGoalChange?: (newGoal: number) => void }) {
   const calPct    = Math.min(kal.current / kal.goal, 1);
   const remaining = kal.goal - kal.current;
   const pPct = Math.min(kal.protein.current / kal.protein.goal, 1);
   const kPct = Math.min(kal.carbs.current / kal.carbs.goal, 1);
   const fPct = Math.min(kal.fat.current / kal.fat.goal, 1);
+
+  const { steps } = kal;
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const stepPct      = steps.today / steps.goal;
+  const stepFill     = Math.min(stepPct, 1);
+  const stepBarColor = stepPct >= 1 ? '#C0DD97' : stepPct >= 0.7 ? '#AFA9EC' : '#D3D1C7';
+  const showBanner   = steps.suggestionPending && !bannerDismissed;
 
   return (
     <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
@@ -150,6 +168,40 @@ function KalorienCard({ kal, onPress }: { kal: KalorienStats; onPress?: () => vo
       </View>
 
       <Text style={[styles.cardSub, { marginTop: 3 }]}>{remaining} kcal übrig</Text>
+
+      {/* ── Schritte ── */}
+      <View style={styles.stepsDivider} />
+
+      <View style={styles.stepsRow}>
+        <View style={styles.stepsLeft}>
+          <Ionicons name="walk-outline" size={12} color={colors.textTertiary} />
+          <Text style={styles.stepsLabel}>Schritte</Text>
+        </View>
+        <Text style={styles.stepsValue}>
+          {steps.today.toLocaleString('de-DE')} / {steps.goal.toLocaleString('de-DE')}
+        </Text>
+      </View>
+
+      <View style={styles.stepsBarTrack}>
+        <View style={{ flex: stepFill, backgroundColor: stepBarColor, borderRadius: 2 }} />
+        <View style={{ flex: 1 - stepFill }} />
+      </View>
+
+      {showBanner && (
+        <View style={styles.stepsBanner}>
+          <Text style={styles.stepsBannerText} numberOfLines={2}>
+            {'Ziel anpassen auf '}{steps.suggestedGoal.toLocaleString('de-DE')}{'? Dein Schnitt liegt bei '}{steps.avgLast4Weeks.toLocaleString('de-DE')}
+          </Text>
+          <View style={styles.stepsBannerActions}>
+            <TouchableOpacity onPress={() => { onStepsGoalChange?.(steps.suggestedGoal); setBannerDismissed(true); }}>
+              <Text style={styles.stepsBannerYes}>Ja</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setBannerDismissed(true)}>
+              <Text style={styles.stepsBannerNo}>Nein</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -392,6 +444,74 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     backgroundColor: colors.bgCard,
     overflow: 'hidden',
+  },
+
+  // Schritte
+  stepsDivider: {
+    height: 0.5,
+    backgroundColor: colors.border,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  stepsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  stepsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  stepsLabel: {
+    fontSize: 10,
+    color: colors.textTertiary,
+  },
+  stepsValue: {
+    fontSize: 10,
+    color: colors.textTertiary,
+  },
+  stepsBarTrack: {
+    flexDirection: 'row',
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.bgSecondary,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  stepsAvg: {
+    fontSize: 9,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+  },
+  stepsBanner: {
+    marginTop: 6,
+    backgroundColor: colors.amberLight,
+    borderWidth: 0.5,
+    borderColor: colors.amberLight,
+    borderRadius: 8,
+    padding: 5,
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  stepsBannerText: {
+    fontSize: 10,
+    color: colors.amberDark,
+    flex: 1,
+  },
+  stepsBannerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  stepsBannerYes: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.teal,
+  },
+  stepsBannerNo: {
+    fontSize: 10,
+    color: colors.textTertiary,
   },
 
   // Ziel-Check card

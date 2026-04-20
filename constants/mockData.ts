@@ -106,6 +106,26 @@ export const mockStats = {
       { label: 'Kalorien-Schnitt', value: '1.980 · zu wenig',   status: 'warn' },
     ],
   },
+  steps: (() => {
+    const today         = 6240
+    const goal          = 8000
+    const avgLast4Weeks = 7340
+    const suggestedGoal = 7500
+    const diff          = Math.abs(avgLast4Weeks - goal) / goal
+    return {
+      today,
+      goal,
+      avgLast4Weeks,
+      history: [
+        { week: 'KW 13', avg: 6800 },
+        { week: 'KW 14', avg: 7200 },
+        { week: 'KW 15', avg: 7600 },
+        { week: 'KW 16', avg: 7340 },
+      ],
+      suggestionPending: diff > 0.15,
+      suggestedGoal,
+    }
+  })(),
   week: [
     { pct: 98,  isToday: false },  // Mo — grün
     { pct: 72,  isToday: false },  // Di — lila

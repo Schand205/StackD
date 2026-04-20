@@ -1,12 +1,15 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Pressable, StyleSheet,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { useAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { Ionicons } from '@expo/vector-icons'
+import { stepsGoalAtom } from '@/atoms/stepsAtoms'
+import { getTodaySteps } from '@/utils/healthKit'
+import { mockStats } from '@/constants/mockData'
 import Svg, { Circle } from 'react-native-svg'
 import { colors } from '@/constants/colors'
 import { FS, SP, screenWidth } from '@/constants/layout'
@@ -386,6 +389,14 @@ export default function CaloriesScreen() {
   const { grouped: entriesByMeal, totals } = useDayLog(date)
   const { goal } = useUserGoal()
 
+  const stepsGoal = useAtomValue(stepsGoalAtom)
+  const [todaySteps, setTodaySteps] = useState(mockStats.steps.today)
+  useEffect(() => { getTodaySteps().then(setTodaySteps) }, [])
+
+  const stepPct   = todaySteps / stepsGoal
+  const stepFill  = Math.min(stepPct, 1)
+  const stepColor = stepPct >= 1 ? '#C0DD97' : stepPct >= 0.7 ? '#AFA9EC' : '#D3D1C7'
+
   const { kcal: totalKcal, protein: totalProtein, carbs: totalCarbs, fat: totalFat } = totals
   const remaining = Math.max(goal.kcal - totalKcal, 0)
 
@@ -446,6 +457,22 @@ export default function CaloriesScreen() {
             <MacroPill label="Protein"       current={totalProtein} goal={goal.protein} color={colors.purple} />
             <MacroPill label="Kohlenhydrate" current={totalCarbs}   goal={goal.carbs}   color={colors.amber}  />
             <MacroPill label="Fett"          current={totalFat}     goal={goal.fat}     color={colors.teal}   />
+          </View>
+
+          {/* ── Schritte ── */}
+          <View style={styles.stepsDivider} />
+          <View style={styles.stepsRow}>
+            <View style={styles.stepsLeft}>
+              <Ionicons name="walk-outline" size={13} color={colors.textTertiary} />
+              <Text style={styles.stepsLabel}>Schritte heute</Text>
+            </View>
+            <Text style={styles.stepsValue}>
+              {todaySteps.toLocaleString('de-DE')} / {stepsGoal.toLocaleString('de-DE')}
+            </Text>
+          </View>
+          <View style={styles.stepsBarTrack}>
+            <View style={{ flex: stepFill, backgroundColor: stepColor, borderRadius: 3 }} />
+            <View style={{ flex: 1 - stepFill }} />
           </View>
         </View>
 
@@ -526,6 +553,14 @@ const styles = StyleSheet.create({
   macroBar:    { height: 3, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' },
   macroBarFill: { height: 3, borderRadius: 2 },
   macroValue:  { fontSize: FS.small, marginTop: 1 },
+
+  // Schritte
+  stepsDivider:  { height: 0.5, backgroundColor: colors.border, marginTop: 1 },
+  stepsRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 0, marginBottom: 0 },
+  stepsLeft:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepsLabel:    { fontSize: FS.small, color: colors.textTertiary },
+  stepsValue:    { fontSize: FS.small, color: colors.textTertiary },
+  stepsBarTrack: { flexDirection: 'row', height: 4, borderRadius: 3, backgroundColor: colors.bgSecondary, overflow: 'hidden' },
 
   // Meal card
   mealCard:      { backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: SP.card, paddingVertical: 12 },

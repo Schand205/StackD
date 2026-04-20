@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useAtom } from 'jotai';
+import { stepsGoalAtom } from '@/atoms/stepsAtoms';
+import { getTodaySteps, getAvgStepsLast4Weeks } from '@/utils/healthKit';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
@@ -49,6 +51,14 @@ export default function FeedScreen() {
   const todayStr = useMemo(localToday, [])
   const { totals } = useDayLog(todayStr)
   const { goal }   = useUserGoal()
+  const [stepsGoal, setStepsGoal] = useAtom(stepsGoalAtom)
+  const [todaySteps, setTodaySteps] = useState(mockStats.steps.today)
+  const [avgSteps,   setAvgSteps]   = useState(mockStats.steps.avgLast4Weeks)
+
+  useEffect(() => {
+    getTodaySteps().then(setTodaySteps)
+    getAvgStepsLast4Weeks().then(setAvgSteps)
+  }, [])
 
   const kalorienStats: KalorienStats = {
     current: totals.kcal,
@@ -56,6 +66,13 @@ export default function FeedScreen() {
     protein: { current: totals.protein, goal: goal.protein },
     carbs:   { current: totals.carbs,   goal: goal.carbs   },
     fat:     { current: totals.fat,     goal: goal.fat     },
+    steps: {
+      ...mockStats.steps,
+      today:             todaySteps,
+      avgLast4Weeks:     avgSteps,
+      goal:              stepsGoal,
+      suggestionPending: Math.abs(avgSteps - stepsGoal) / stepsGoal > 0.15,
+    },
   }
 
   // ── Gym sync ──
@@ -138,6 +155,7 @@ export default function FeedScreen() {
           onGymPress={() => router.navigate('/(tabs)/gym' as never)}
           onKalorienPress={() => router.navigate('/(tabs)/calories' as never)}
           onZielPress={() => router.push({ pathname: '/(tabs)/gym' as any, params: { section: 'ziel' } })}
+          onStepsGoalChange={setStepsGoal}
         />
 
         {/* Friends Row */}

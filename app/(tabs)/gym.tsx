@@ -18,7 +18,7 @@ import { TabBar } from '@/components/common/TabBar'
 import { SetEntrySheet } from '@/components/gym/SetEntrySheet'
 import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
-import { defaultTemplatesPerSplit } from '@/data/mockGymData'
+import { defaultTemplatesPerSplit, mockDayLogs } from '@/data/mockGymData'
 import { useGymContext } from '@/context/GymContext'
 import type { WeekDay, WorkoutSplit } from '@/types/gym'
 
@@ -67,6 +67,65 @@ function fmtWeight(w: number): string {
   return w % 1 === 0 ? `${w} kg` : `${w.toFixed(1)} kg`
 }
 
+// ─── Last Session Helper ──────────────────────────────────────────────────────
+
+type LastSessionData = {
+  previousMaxWeight: number | 'BW'
+  previousTotalSets: number
+  previousBestReps: number
+}
+
+function getLastSessionData(
+  exerciseId: string,
+  templateId: string,
+  liveData: Record<string, ExerciseState[]>,
+  weekPlan: Record<string, string | null>,
+  currentWeekDay: string,
+): LastSessionData | null {
+  // 1. Prefer live atom data from other days with the same template
+  const otherDays = WEEK_KEYS.filter(d => d !== currentWeekDay && weekPlan[d] === templateId)
+  for (const day of otherDays) {
+    const ex = (liveData[day] ?? []).find(e => e.id === exerciseId)
+    if (!ex || ex.sets.length === 0) continue
+    const maxW = Math.max(...ex.sets.map(s => s.weight))
+    const bestReps = Math.max(...ex.sets.filter(s => s.weight === maxW).map(s => s.reps))
+    return {
+      previousMaxWeight: maxW,
+      previousTotalSets: ex.sets.length,
+      previousBestReps: bestReps,
+    }
+  }
+
+  // 2. Fall back to static mock history
+  const sorted = [...mockDayLogs]
+    .filter(log => log.templateId === templateId)
+    .sort((a, b) => b.date.localeCompare(a.date))
+
+  for (const log of sorted) {
+    const exSets = log.sets.filter(s => s.exerciseId === exerciseId)
+    if (exSets.length === 0) continue
+
+    const numericWeights = exSets
+      .filter((s): s is typeof s & { weight: number } => typeof s.weight === 'number')
+      .map(s => s.weight)
+
+    const previousMaxWeight: number | 'BW' =
+      numericWeights.length > 0 ? Math.max(...numericWeights) : 'BW'
+
+    const atMax = numericWeights.length > 0
+      ? exSets.filter(s => s.weight === previousMaxWeight)
+      : exSets
+    const previousBestReps = Math.max(...atMax.map(s => s.reps))
+
+    return {
+      previousMaxWeight,
+      previousTotalSets: exSets.length,
+      previousBestReps,
+    }
+  }
+  return null
+}
+
 // ─── DayCell ──────────────────────────────────────────────────────────────────
 
 type DayCellProps = {
@@ -113,11 +172,25 @@ function DayCell({ label, templateName, isSelected, isToday, logged, onPress, on
 
 // ─── SetPill ──────────────────────────────────────────────────────────────────
 
-function SetPill({ set }: { set: SetEntry }) {
+function SetPill({ set, onEdit, onDelete }: { set: SetEntry; onEdit: () => void; onDelete: () => void }) {
   return (
-    <View style={styles.setPill}>
+    <TouchableOpacity
+      style={styles.setPill}
+      activeOpacity={0.7}
+      onPress={() =>
+        Alert.alert(
+          `${fmtWeight(set.weight)} · ×${set.reps}`,
+          undefined,
+          [
+            { text: 'Bearbeiten', onPress: onEdit },
+            { text: 'Löschen', style: 'destructive', onPress: onDelete },
+            { text: 'Abbrechen', style: 'cancel' },
+          ]
+        )
+      }
+    >
       <Text style={styles.setPillText}>{fmtWeight(set.weight)} · {set.reps}</Text>
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -133,31 +206,69 @@ function EmptySetPill({ onPress }: { onPress: () => void }) {
 
 type ExerciseCardProps = {
   exercise: ExerciseState
+  lastSession: LastSessionData | null
   onAddSet: (exerciseId: string, exerciseName: string, setNumber: number) => void
+  onEditSet: (exerciseId: string, exerciseName: string, setIndex: number, set: SetEntry) => void
+  onDeleteSet: (exerciseId: string, setIndex: number) => void
 }
 
-function ExerciseCard({ exercise, onAddSet }: ExerciseCardProps) {
-  const subtitle = exercise.lastWeight === 0
-    ? `Letzte Woche: KG · ${exercise.lastSets}×${exercise.lastReps}`
-    : `Letzte Woche: ${fmtWeight(exercise.lastWeight)} · ${exercise.lastSets}×${exercise.lastReps}`
+function ExerciseCard({ exercise, lastSession, onAddSet, onEditSet, onDeleteSet }: ExerciseCardProps) {
+  // ── Comparison badge ──
+  let badgeType: 'none' | 'same' | 'up' | null = null
+  let badgeText = ''
+
+  if (lastSession) {
+    const prevW = lastSession.previousMaxWeight
+    if (exercise.sets.length === 0) {
+      badgeType = 'none'
+      const prevStr = prevW === 'BW' ? 'BW' : `${prevW} kg`
+      badgeText = `zuletzt: ${prevStr} · ${lastSession.previousTotalSets}×${lastSession.previousBestReps}`
+    } else {
+      const todayMax = Math.max(...exercise.sets.map(s => s.weight))
+      const isUp = prevW === 'BW' ? todayMax > 0 : todayMax > (prevW as number)
+      badgeType = isUp ? 'up' : 'same'
+      const prevStr = prevW === 'BW' ? 'BW' : String(prevW)
+      const todayStr = todayMax === 0 ? 'BW' : String(todayMax)
+      badgeText = isUp ? `↑ ${prevStr} → ${todayStr} kg` : `${prevStr} → ${todayStr} kg`
+    }
+  }
 
   return (
-    <View style={styles.exerciseCard}>
+    <View style={[styles.exerciseCard, badgeType === 'up' && styles.exerciseCardUp]}>
       <View style={styles.exerciseHeader}>
+        {/* Title row: name + badges */}
         <View style={styles.exerciseTitleRow}>
-          <Text style={styles.exerciseName}>{exercise.name}</Text>
-          {exercise.pr && (
-            <View style={styles.prBadge}>
-              <Text style={styles.prBadgeText}>PR</Text>
+          <View style={styles.exerciseTitleLeft}>
+            <Text style={styles.exerciseName}>{exercise.name}</Text>
+            {exercise.pr && (
+              <View style={styles.prBadge}>
+                <Text style={styles.prBadgeText}>PR</Text>
+              </View>
+            )}
+          </View>
+          {badgeType === 'up' && (
+            <View style={styles.compBadgeGreen}>
+              <Text style={styles.compBadgeTextGreen}>{badgeText}</Text>
+            </View>
+          )}
+          {(badgeType === 'none' || badgeType === 'same') && (
+            <View style={styles.compBadgeGray}>
+              <Text style={styles.compBadgeTextGray}>{badgeText}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.exerciseSubtitle}>{subtitle}</Text>
+
       </View>
 
+      {/* Today's sets */}
       <View style={styles.setsRow}>
         {exercise.sets.map((s, i) => (
-          <SetPill key={i} set={s} />
+          <SetPill
+            key={i}
+            set={s}
+            onEdit={() => onEditSet(exercise.id, exercise.name, i, s)}
+            onDelete={() => onDeleteSet(exercise.id, i)}
+          />
         ))}
         <EmptySetPill
           onPress={() => onAddSet(exercise.id, exercise.name, exercise.sets.length + 1)}
@@ -187,10 +298,8 @@ function PRToast({ exerciseName, weight }: { exerciseName: string; weight: numbe
 
 // ─── WeightProgressCard ───────────────────────────────────────────────────────
 
-function WeightProgressCard({ exerciseData }: { exerciseData: Record<string, ExerciseState[]> }) {
-  const prExercises = Object.values(exerciseData)
-    .flat()
-    .filter(e => e.pr && e.sets.length > 0)
+function WeightProgressCard({ exercises }: { exercises: ExerciseState[] }) {
+  const prExercises = exercises.filter(e => e.pr && e.sets.length > 0)
 
   if (prExercises.length === 0) return null
 
@@ -366,9 +475,29 @@ export default function GymScreen() {
     // No pre-initialization needed — exercises are derived from template at render time.
   }
 
+  const [editingSetIndex, setEditingSetIndex] = useState<number | null>(null)
+
   function handleAddSet(exerciseId: string, exerciseName: string, setNumber: number) {
     setSelectedExercise({ exerciseId, setNumber, exerciseName })
+    setEditingSetIndex(null)
     setEntrySheetVisible(true)
+  }
+
+  function handleEditSet(exerciseId: string, exerciseName: string, setIndex: number, set: SetEntry) {
+    setSelectedExercise({ exerciseId, setNumber: setIndex + 1, exerciseName })
+    setEditingSetIndex(setIndex)
+    setEntrySheetVisible(true)
+  }
+
+  function handleDeleteSet(exerciseId: string, setIndex: number) {
+    setExerciseData(prev => ({
+      ...prev,
+      [currentWeekDay]: exercises.map(ex =>
+        ex.id === exerciseId
+          ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) }
+          : ex
+      ),
+    }))
   }
 
   function handleSave(weight: number, reps: number, isPR: boolean) {
@@ -376,14 +505,18 @@ export default function GymScreen() {
 
     setExerciseData(prev => ({
       ...prev,
-      [currentWeekDay]: exercises.map(ex =>
-        ex.id === selectedExercise.exerciseId
-          ? { ...ex, sets: [...ex.sets, { weight, reps }], pr: ex.pr || isPR }
-          : ex
-      ),
+      [currentWeekDay]: exercises.map(ex => {
+        if (ex.id !== selectedExercise.exerciseId) return ex
+        if (editingSetIndex !== null) {
+          const newSets = [...ex.sets]
+          newSets[editingSetIndex] = { weight, reps }
+          return { ...ex, sets: newSets }
+        }
+        return { ...ex, sets: [...ex.sets, { weight, reps }], pr: ex.pr || isPR }
+      }),
     }))
 
-    if (isPR) {
+    if (editingSetIndex === null && isPR) {
       setPRToastData({ exerciseName: selectedExercise.exerciseName, weight })
       setShowPRToast(true)
       toastOpacity.setValue(0)
@@ -396,6 +529,7 @@ export default function GymScreen() {
       }, 3000)
     }
 
+    setEditingSetIndex(null)
     setEntrySheetVisible(false)
     setSelectedExercise(null)
   }
@@ -482,12 +616,15 @@ export default function GymScreen() {
             <ExerciseCard
               key={ex.id}
               exercise={ex}
+              lastSession={currentTemplateId ? getLastSessionData(ex.id, currentTemplateId, exerciseData, weekPlan, currentWeekDay) : null}
               onAddSet={handleAddSet}
+              onEditSet={handleEditSet}
+              onDeleteSet={handleDeleteSet}
             />
           ))
         )}
 
-        <WeightProgressCard exerciseData={exerciseData} />
+        <WeightProgressCard exercises={exercises} />
 
       </ScrollView>
 
@@ -524,12 +661,17 @@ export default function GymScreen() {
       {/* ── SetEntrySheet ── */}
       <SetEntrySheet
         visible={entrySheetVisible}
-        onClose={() => { setEntrySheetVisible(false); setSelectedExercise(null) }}
+        onClose={() => { setEntrySheetVisible(false); setSelectedExercise(null); setEditingSetIndex(null) }}
         onSave={handleSave}
         exerciseName={selectedExercise?.exerciseName ?? ''}
         setNumber={selectedExercise?.setNumber ?? 1}
-        lastSetToday={selectedExercise ? getLastSetToday(selectedExercise.exerciseId) : undefined}
+        lastSetToday={
+          editingSetIndex !== null && selectedExercise
+            ? exercises.find(ex => ex.id === selectedExercise.exerciseId)?.sets[editingSetIndex]
+            : selectedExercise ? getLastSetToday(selectedExercise.exerciseId) : undefined
+        }
         previousBest={selectedExercise ? getPreviousBest(selectedExercise.exerciseId) : undefined}
+        isEditing={editingSetIndex !== null}
       />
 
       {/* ── SplitSelectSheet ── */}
@@ -750,8 +892,42 @@ const styles = StyleSheet.create({
   exerciseTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 6,
   },
+  exerciseTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  exerciseCardUp: {
+    borderColor: 'rgba(29,158,117,0.25)',
+  },
+  compBadgeGray: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#f7f7f5',
+    flexShrink: 0,
+  },
+  compBadgeTextGray: {
+    fontSize: 11,
+    color: '#999999',
+  },
+  compBadgeGreen: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(29,158,117,0.08)',
+    flexShrink: 0,
+  },
+  compBadgeTextGreen: {
+    fontSize: 11,
+    color: GREEN_LOGGED,
+    fontWeight: '500',
+  },
+
   exerciseName: {
     fontSize: FS.body * 1.1,
     fontWeight: '500',

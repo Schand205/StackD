@@ -27,6 +27,7 @@ export interface SetEntrySheetProps {
   setNumber: number
   lastSetToday?: { weight: number; reps: number }
   previousBest?: number
+  isEditing?: boolean
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ export function SetEntrySheet({
   setNumber,
   lastSetToday,
   previousBest,
+  isEditing = false,
 }: SetEntrySheetProps) {
   const { bottom } = useSafeAreaInsets()
 
@@ -206,7 +208,7 @@ export function SetEntrySheet({
             {isPR && (
               <Ionicons name="trophy" size={15} color="#fff" style={styles.saveBtnIcon} />
             )}
-            <Text style={styles.saveBtnText}>Satz speichern</Text>
+            <Text style={styles.saveBtnText}>{isEditing ? 'Satz aktualisieren' : 'Satz speichern'}</Text>
           </TouchableOpacity>
 
         </Pressable>
