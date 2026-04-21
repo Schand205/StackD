@@ -9,7 +9,8 @@ import { getTodaySteps, getAvgStepsLast4Weeks } from '@/utils/healthKit';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
-import { mockFriends, mockActivities, mockStats } from '@/constants/mockData';
+import { mockFriends, mockActivities, mockStats } from '@/constants/mockData'
+import { getGoalContext } from '@/utils/goalContext';
 import { ProgressCard } from '@/components/feed/ProgressCard';
 import type { GymStats, KalorienStats, ZielCheck } from '@/components/feed/ProgressCard';
 import { FriendChip } from '@/components/feed/FriendChip';
@@ -61,8 +62,11 @@ export default function FeedScreen() {
   }, [])
 
   const kalorienStats: KalorienStats = {
-    current: totals.kcal,
-    goal:    goal.kcal,
+    current:          totals.kcal,
+    goal:             goal.kcal,
+    basalRate:        mockStats.kalorien.basalRate,
+    stepCalories:     mockStats.kalorien.stepCalories,
+    liveStepCalories: mockStats.kalorien.liveStepCalories,
     protein: { current: totals.protein, goal: goal.protein },
     carbs:   { current: totals.carbs,   goal: goal.carbs   },
     fat:     { current: totals.fat,     goal: goal.fat     },
@@ -76,7 +80,7 @@ export default function FeedScreen() {
   }
 
   // ── Gym sync ──
-  const { currentSplit, userTemplates } = useGymContext()
+  const { userTemplates } = useGymContext()
   const weekPlan     = useAtomValue(weekPlanAtom)
   const exerciseData = useAtomValue(exerciseDataAtom)
 
@@ -123,7 +127,8 @@ export default function FeedScreen() {
       })
     : [{ label: 'Heute noch kein PR', value: 'Viel Erfolg!', status: 'warn' as const }]
 
-  const zielCheck: ZielCheck = { name: currentSplit, items: zielItems }
+  const goalCtx = getGoalContext()
+  const zielCheck: ZielCheck = { name: goalCtx.goalLabel, items: zielItems }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

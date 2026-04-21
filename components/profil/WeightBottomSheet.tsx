@@ -7,6 +7,7 @@ import Svg, { Polyline, Circle } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
+import { getGoalContext } from '@/utils/goalContext'
 
 const GERMAN_MONTHS = [
   'Januar','Februar','März','April','Mai','Juni',
@@ -41,6 +42,11 @@ export function WeightBottomSheet({ visible, currentWeight, onClose, onSave }: P
 
   const parsed  = parseFloat(input.replace(',', '.'))
   const isValid = !isNaN(parsed) && parsed > 0
+
+  const goalCtx = getGoalContext()
+  const delta   = isValid ? parsed - currentWeight : 0
+  const deltaColor = delta === 0 ? colors.textTertiary
+    : goalCtx.isPositive(delta) ? colors.teal : colors.amber
 
   const history = [...MOCK_HISTORY.slice(0, 4), isValid ? parsed : currentWeight]
 
@@ -88,8 +94,15 @@ export function WeightBottomSheet({ visible, currentWeight, onClose, onSave }: P
             <Text style={styles.unit}>kg</Text>
           </View>
 
-          {/* Date */}
-          <Text style={styles.dateLabel}>{formatDateLabel()}</Text>
+          {/* Date + delta */}
+          <View style={styles.dateDeltaRow}>
+            <Text style={styles.dateLabel}>{formatDateLabel()}</Text>
+            {delta !== 0 && (
+              <Text style={[styles.deltaLabel, { color: deltaColor }]}>
+                {delta > 0 ? '+' : ''}{delta.toFixed(1)} kg
+              </Text>
+            )}
+          </View>
 
           {/* Mini graph */}
           <View
@@ -191,11 +204,21 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     paddingBottom: 10,
   },
+  dateDeltaRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
   dateLabel: {
     fontSize: 12,
     color: colors.textTertiary,
     textAlign: 'center',
-    marginBottom: 20,
+  },
+  deltaLabel: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   graphWrap: {
     height: GRAPH_H,

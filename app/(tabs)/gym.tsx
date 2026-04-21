@@ -15,12 +15,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
 import { TabBar } from '@/components/common/TabBar'
+import { InnerTabBar } from '@/components/common/InnerTabBar'
 import { SetEntrySheet } from '@/components/gym/SetEntrySheet'
 import { DayAssignSheet } from '@/components/gym/DayAssignSheet'
 import { SplitSelectSheet } from '@/components/gym/SplitSelectSheet'
 import { defaultTemplatesPerSplit, mockDayLogs } from '@/data/mockGymData'
 import { useGymContext } from '@/context/GymContext'
 import type { WeekDay, WorkoutSplit } from '@/types/gym'
+import { exerciseHistory } from '@/constants/mockData'
+import { LineChart } from '@/components/charts/LineChart'
+
+// ─── Verlauf helpers ──────────────────────────────────────────────────────────
+
+const V_PERIODS = ['1M', '3M', '6M', '1J'] as const
+type VPeriod = typeof V_PERIODS[number]
+const V_PERIOD_DAYS: Record<VPeriod, number> = { '1M': 30, '3M': 90, '6M': 180, '1J': 365 }
+
+function vFilterByPeriod<T extends { date: string }>(entries: T[], period: VPeriod): T[] {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - V_PERIOD_DAYS[period])
+  const iso = cutoff.toISOString().slice(0, 10)
+  return entries.filter(e => e.date >= iso)
+}
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 
@@ -370,6 +386,36 @@ export default function GymScreen() {
   const [assignSheetVisible, setAssignSheetVisible] = useState(false)
   const [assignSheetState, setAssignSheetState] = useState<AssignSheetState | null>(null)
 
+  // ── Inner tab ──
+  const [innerTab, setInnerTab] = useState<'log' | 'verlauf'>('log')
+
+  // ── Verlauf state ──
+  const [verlaufSelected, setVerlaufSelected] = useState<Set<string>>(
+    () => new Set(exerciseHistory.slice(0, 3).map(e => e.name))
+  )
+  const [verlaufPeriod, setVerlaufPeriod] = useState<VPeriod>('3M')
+
+  const verlaufChartData = React.useMemo(() => {
+    const data: { date: string; value: number }[][] = []
+    const cols: string[] = []
+    for (const ex of exerciseHistory) {
+      if (!verlaufSelected.has(ex.name)) continue
+      const pts = vFilterByPeriod([...ex.data], verlaufPeriod)
+      if (pts.length === 0) continue
+      data.push(pts.map(p => ({ date: p.date, value: p.weight })))
+      cols.push(ex.color)
+    }
+    return { data, colors: cols }
+  }, [verlaufSelected, verlaufPeriod])
+
+  function toggleVerlaufEx(name: string) {
+    setVerlaufSelected(prev => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
   // ── Long-press hint ──
   const [showLongPressHint, setShowLongPressHint] = useState(false)
 
@@ -562,101 +608,162 @@ export default function GymScreen() {
       {/* ── PR Toast (fixed overlay) ── */}
       {showPRToast && prToastData && (
         <Animated.View style={[styles.prToastWrap, { opacity: toastOpacity }]} pointerEvents="none">
-          <PRToast
-            exerciseName={prToastData.exerciseName}
-            weight={prToastData.weight}
-          />
+          <PRToast exerciseName={prToastData.exerciseName} weight={prToastData.weight} />
         </Animated.View>
       )}
 
-      {/* ── Scrollable content ── */}
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + ZIEL_CARD_HEIGHT + 24 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Trainingsplan section ── */}
-        <View onLayout={e => setTrainingsplanY(e.nativeEvent.layout.y)}>
-          <Text style={styles.sectionLabel}>Trainingsplan</Text>
-          <View style={styles.weekStrip}>
-            {WEEK_KEYS.map((weekDay, idx) => {
-              const tId    = weekPlan[weekDay]
-              const tName  = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
-              const logged = tId ? (exerciseData[weekDay] ?? []).some(ex => ex.sets.length > 0) : false
-              return (
-                <DayCell
-                  key={weekDay}
-                  label={weekDay}
-                  templateName={tName}
-                  isSelected={selectedDay === idx}
-                  isToday={idx === TODAY_IDX}
-                  logged={logged}
-                  onPress={() => handleDayTap(idx)}
-                  onLongPress={() => handleDayLongPress(idx)}
+      {/* ── Inner tab bar ── */}
+      <InnerTabBar
+        tabs={[{ key: 'log', label: 'Log' }, { key: 'verlauf', label: 'Verlauf' }]}
+        activeTab={innerTab}
+        onTabChange={key => setInnerTab(key as 'log' | 'verlauf')}
+      />
+
+      {/* ══ Tab: Log ══════════════════════════════════════════════════════════ */}
+      {innerTab === 'log' && (
+        <>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + ZIEL_CARD_HEIGHT + 24 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <View onLayout={e => setTrainingsplanY(e.nativeEvent.layout.y)}>
+              <Text style={styles.sectionLabel}>Trainingsplan</Text>
+              <View style={styles.weekStrip}>
+                {WEEK_KEYS.map((weekDay, idx) => {
+                  const tId    = weekPlan[weekDay]
+                  const tName  = tId ? (userTemplates.find(t => t.id === tId)?.name ?? null) : null
+                  const logged = tId ? (exerciseData[weekDay] ?? []).some(ex => ex.sets.length > 0) : false
+                  return (
+                    <DayCell
+                      key={weekDay}
+                      label={weekDay}
+                      templateName={tName}
+                      isSelected={selectedDay === idx}
+                      isToday={idx === TODAY_IDX}
+                      logged={logged}
+                      onPress={() => handleDayTap(idx)}
+                      onLongPress={() => handleDayLongPress(idx)}
+                    />
+                  )
+                })}
+              </View>
+              {showLongPressHint && (
+                <Text style={styles.longPressHint}>Gedrückt halten zum Planen</Text>
+              )}
+            </View>
+
+            <Text style={styles.sectionTitle}>{headerLabel}</Text>
+
+            {exercises.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="bed-outline" size={30} color={colors.textTertiary} />
+                <Text style={styles.emptyStateText}>Ruhetag – erhol dich!</Text>
+              </View>
+            ) : (
+              exercises.map(ex => (
+                <ExerciseCard
+                  key={ex.id}
+                  exercise={ex}
+                  lastSession={currentTemplateId ? getLastSessionData(ex.id, currentTemplateId, exerciseData, weekPlan, currentWeekDay) : null}
+                  onAddSet={handleAddSet}
+                  onEditSet={handleEditSet}
+                  onDeleteSet={handleDeleteSet}
                 />
+              ))
+            )}
+
+            <WeightProgressCard exercises={exercises} />
+          </ScrollView>
+
+          {/* Dein Ziel — fixed above TabBar */}
+          <View style={[styles.zielCard, { marginBottom: tabBarHeight }]}>
+            <Text style={styles.sectionLabel}>Dein Ziel</Text>
+            <View style={styles.zielRow}>
+              <View style={styles.zielTile}>
+                <Text style={styles.zielTileValue}>{currentSplit}</Text>
+                <Text style={styles.zielTileLabel}>Split</Text>
+              </View>
+              <View style={styles.zielDivider} />
+              <View style={styles.zielTile}>
+                <Text style={styles.zielTileValue}>
+                  {Object.values(weekPlan).filter(Boolean).length}×
+                </Text>
+                <Text style={styles.zielTileLabel}>pro Woche</Text>
+              </View>
+              <View style={styles.zielDivider} />
+              <View style={styles.zielTile}>
+                <Text style={styles.zielTileValue}>{userTemplates.length}</Text>
+                <Text style={styles.zielTileLabel}>Templates</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.zielBtn} onPress={() => setSplitSheetVisible(true)} activeOpacity={0.75}>
+              <Text style={styles.zielBtnText}>Split ändern</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* ══ Tab: Verlauf ══════════════════════════════════════════════════════ */}
+      {innerTab === 'verlauf' && (
+        <ScrollView
+          contentContainerStyle={[styles.verlaufContent, { paddingBottom: tabBarHeight + 16 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Period pills */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
+            {V_PERIODS.map(p => (
+              <TouchableOpacity
+                key={p}
+                style={[styles.pill, p === verlaufPeriod && styles.pillActive]}
+                onPress={() => setVerlaufPeriod(p)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.pillText, p === verlaufPeriod && styles.pillTextActive]}>{p}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Chart card */}
+          <View style={styles.verlaufCard}>
+            {verlaufChartData.data.length > 0 ? (
+              <LineChart data={verlaufChartData.data} colors={verlaufChartData.colors} showGoalLine={false} height={140} />
+            ) : (
+              <View style={styles.emptyChart}>
+                <Text style={styles.emptyChartText}>Keine Übung ausgewählt</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Exercise selector */}
+          <Text style={styles.verlaufSectionLabel}>Übungen auswählen</Text>
+          <View style={styles.verlaufCard}>
+            {exerciseHistory.map((ex, i) => {
+              const isChecked = verlaufSelected.has(ex.name)
+              const lastPt    = ex.data[ex.data.length - 1]
+              return (
+                <TouchableOpacity
+                  key={ex.name}
+                  style={[styles.exRow, i < exerciseHistory.length - 1 && styles.exBorder]}
+                  onPress={() => toggleVerlaufEx(ex.name)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.checkbox,
+                    isChecked ? { backgroundColor: ex.color, borderColor: ex.color } : styles.checkboxUnchecked,
+                  ]}>
+                    {isChecked && <Ionicons name="checkmark" size={11} color="#fff" />}
+                  </View>
+                  <View style={[styles.exDot, { backgroundColor: ex.color }]} />
+                  <Text style={styles.exName}>{ex.name}</Text>
+                  <Text style={styles.exLast}>{lastPt ? `${lastPt.weight} kg` : '–'}</Text>
+                </TouchableOpacity>
               )
             })}
           </View>
-          {showLongPressHint && (
-            <Text style={styles.longPressHint}>Gedrückt halten zum Planen</Text>
-          )}
-        </View>
-
-        {/* ── Tagesansicht ── */}
-        <Text style={styles.sectionTitle}>{headerLabel}</Text>
-
-        {exercises.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="bed-outline" size={30} color={colors.textTertiary} />
-            <Text style={styles.emptyStateText}>Ruhetag – erhol dich!</Text>
-          </View>
-        ) : (
-          exercises.map(ex => (
-            <ExerciseCard
-              key={ex.id}
-              exercise={ex}
-              lastSession={currentTemplateId ? getLastSessionData(ex.id, currentTemplateId, exerciseData, weekPlan, currentWeekDay) : null}
-              onAddSet={handleAddSet}
-              onEditSet={handleEditSet}
-              onDeleteSet={handleDeleteSet}
-            />
-          ))
-        )}
-
-        <WeightProgressCard exercises={exercises} />
-
-      </ScrollView>
-
-      {/* ── Dein Ziel (fixed above TabBar) ── */}
-      <View style={[styles.zielCard, { marginBottom: tabBarHeight }]}>
-        <Text style={styles.sectionLabel}>Dein Ziel</Text>
-        <View style={styles.zielRow}>
-          <View style={styles.zielTile}>
-            <Text style={styles.zielTileValue}>{currentSplit}</Text>
-            <Text style={styles.zielTileLabel}>Split</Text>
-          </View>
-          <View style={styles.zielDivider} />
-          <View style={styles.zielTile}>
-            <Text style={styles.zielTileValue}>
-              {Object.values(weekPlan).filter(Boolean).length}×
-            </Text>
-            <Text style={styles.zielTileLabel}>pro Woche</Text>
-          </View>
-          <View style={styles.zielDivider} />
-          <View style={styles.zielTile}>
-            <Text style={styles.zielTileValue}>{userTemplates.length}</Text>
-            <Text style={styles.zielTileLabel}>Templates</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.zielBtn}
-          onPress={() => setSplitSheetVisible(true)}
-          activeOpacity={0.75}
-        >
-          <Text style={styles.zielBtnText}>Split ändern</Text>
-        </TouchableOpacity>
-      </View>
+        </ScrollView>
+      )}
 
       {/* ── SetEntrySheet ── */}
       <SetEntrySheet
@@ -1090,5 +1197,99 @@ const styles = StyleSheet.create({
     fontSize: FS.small,
     fontWeight: '600',
     color: colors.tealDark,
+  },
+
+  // ── Verlauf tab ──
+  verlaufContent: {
+    paddingTop: 12,
+    gap: 12,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: SP.outer,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.bgCard,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  pillActive: {
+    backgroundColor: colors.purpleLight,
+    borderColor: colors.purpleLight,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  pillTextActive: {
+    color: colors.purpleDark,
+  },
+  verlaufCard: {
+    marginHorizontal: SP.outer,
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: SP.card,
+    overflow: 'hidden',
+  },
+  emptyChart: {
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyChartText: {
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
+  verlaufSectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginHorizontal: SP.outer,
+    marginBottom: -4,
+  },
+  exRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 11,
+    gap: 10,
+  },
+  exBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxUnchecked: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  exDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  exName: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textPrimary,
+  },
+  exLast: {
+    fontSize: 11,
+    color: colors.textTertiary,
   },
 })

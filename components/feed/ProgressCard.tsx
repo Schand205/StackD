@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { calorieMode } from '@/constants/mockData';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
@@ -28,6 +29,9 @@ export type StepsStats = {
 export type KalorienStats = {
   readonly current: number;
   readonly goal: number;
+  readonly basalRate?: number;
+  readonly stepCalories?: number;
+  readonly liveStepCalories?: number;
   readonly protein: MacroStat;
   readonly carbs: MacroStat;
   readonly fat: MacroStat;
@@ -172,23 +176,55 @@ function GymCard({ gym, onPress }: { gym: GymStats; onPress?: () => void }) {
 // ─── Kalorien Card ───────────────────────────────────────────────────────────
 
 function KalorienCard({ kal, onPress }: { kal: KalorienStats; onPress?: () => void }) {
-  const calPct    = Math.min(kal.current / kal.goal, 1);
-  const remaining = kal.goal - kal.current;
+  const isLive = calorieMode.mode === 'live';
+
+  const effectiveGoal =
+    kal.basalRate != null && kal.stepCalories != null && kal.liveStepCalories != null
+      ? isLive
+        ? kal.basalRate + kal.liveStepCalories
+        : kal.basalRate + kal.stepCalories
+      : kal.goal;
+
+  const calPct    = Math.min(kal.current / effectiveGoal, 1);
+  const remaining = effectiveGoal - kal.current;
   const pPct = Math.min(kal.protein.current / kal.protein.goal, 1);
   const kPct = Math.min(kal.carbs.current / kal.carbs.goal, 1);
   const fPct = Math.min(kal.fat.current / kal.fat.goal, 1);
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isLive) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isLive]);
+
+  const subLabel = isLive ? 'Grundbedarf + heutige Schritte' : 'Grundbedarf + Ø Schritte';
 
   return (
     <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
       <Text style={styles.cardLabel}>Kalorien</Text>
       <Text style={styles.calValue}>{kal.current.toLocaleString('de-DE')}</Text>
-      <Text style={styles.calSub}>/ {kal.goal.toLocaleString('de-DE')} kcal</Text>
+
+      <View style={styles.calGoalRow}>
+        <Text style={styles.calSub}>/ {effectiveGoal.toLocaleString('de-DE')} kcal</Text>
+        {isLive && <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />}
+      </View>
+
+      <Text style={styles.calModeSub}>{subLabel}</Text>
 
       {/* Main calorie bar */}
       <View style={styles.barTrack}>
         <View style={{ flex: calPct, backgroundColor: colors.amber, borderRadius: 2 }} />
         <View style={{ flex: 1 - calPct }} />
       </View>
+
+      {isLive && <Text style={styles.liveHint}>Ziel wächst mit deinen Schritten</Text>}
 
       {/* Makros */}
       <View style={styles.makrosRow}>
@@ -345,7 +381,7 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
   },
   cardValue: {
-    fontSize: FS.large,
+    fontSize: FS.body,
     fontWeight: '600',
     color: colors.textPrimary,
     marginTop: 2,
@@ -398,6 +434,29 @@ const styles = StyleSheet.create({
   },
 
   // Kalorien card
+  calGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  liveDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.teal,
+  },
+  calModeSub: {
+    fontSize: 9,
+    color: colors.textTertiary,
+    marginBottom: 4,
+  },
+  liveHint: {
+    fontSize: 9,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+    marginTop: 3,
+    marginBottom: 2,
+  },
   calValue: {
     fontSize: FS.large,
     fontWeight: '600',
