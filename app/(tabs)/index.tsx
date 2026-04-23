@@ -3,24 +3,22 @@ import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAtomValue, useAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { stepsGoalAtom } from '@/atoms/stepsAtoms';
-import { getTodaySteps, getAvgStepsLast4Weeks } from '@/utils/healthKit';
+import { getTodaySteps } from '@/utils/healthKit';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
 import { FS, SP } from '@/constants/layout';
-import { mockFriends, mockActivities, mockStats } from '@/constants/mockData'
-import { getGoalContext } from '@/utils/goalContext';
-import { ProgressCard } from '@/components/feed/ProgressCard';
-import type { GymStats, KalorienStats, ZielCheck } from '@/components/feed/ProgressCard';
+import { mockFriends, mockActivities, mockStats, goalCheck } from '@/constants/mockData';
+import { TodayCard } from '@/components/feed/TodayCard';
+import { GoalCheckCard } from '@/components/feed/GoalCheckCard';
 import { FriendChip } from '@/components/feed/FriendChip';
 import { ActivityCard } from '@/components/feed/ActivityCard';
 import { TabBar } from '@/components/common/TabBar';
 import { QuickLogSheet } from '@/components/shared/QuickLogSheet';
-import { useGymContext } from '@/context/GymContext';
-import { exerciseDataAtom, weekPlanAtom, WEEK_KEYS, TODAY_IDX } from '@/atoms/gymAtoms';
 import { useDayLog, useUserGoal } from '@/hooks/useNutrition';
 import { selectedDateAtom } from '@/atoms/nutritionAtoms';
+import { getGoalContext } from '@/utils/goalContext';
 
 // ─── Date helper ──────────────────────────────────────────────────────────────
 
@@ -32,7 +30,7 @@ function localToday(): string {
   return `${y}-${m}-${day}`
 }
 
-// ─── Feed Screen ──────────────────────────────────────────────────────────────
+// ─── Route map ────────────────────────────────────────────────────────────────
 
 const TAB_ROUTES: Record<string, string> = {
   feed:     '/(tabs)/',
@@ -41,6 +39,8 @@ const TAB_ROUTES: Record<string, string> = {
   profil:   '/(tabs)/profil',
 };
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function FeedScreen() {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
@@ -48,87 +48,35 @@ export default function FeedScreen() {
   const [quickLogVisible, setQuickLogVisible] = useState(false);
   const tabBarHeight = 45 + (bottom > 0 ? bottom : 12);
 
-  // ── Kalorien sync ──
+  // ── Nutrition (live) ──
   const todayStr = useMemo(localToday, [])
   const { totals } = useDayLog(todayStr)
   const { goal }   = useUserGoal()
-  const [stepsGoal, setStepsGoal] = useAtom(stepsGoalAtom)
+
+  // ── Steps ──
+  const [stepsGoal] = useAtom(stepsGoalAtom)
   const [todaySteps, setTodaySteps] = useState(mockStats.steps.today)
-  const [avgSteps,   setAvgSteps]   = useState(mockStats.steps.avgLast4Weeks)
 
   useEffect(() => {
     getTodaySteps().then(setTodaySteps)
-    getAvgStepsLast4Weeks().then(setAvgSteps)
   }, [])
 
-  const kalorienStats: KalorienStats = {
-    current:          totals.kcal,
-    goal:             goal.kcal,
-    basalRate:        mockStats.kalorien.basalRate,
-    stepCalories:     mockStats.kalorien.stepCalories,
-    liveStepCalories: mockStats.kalorien.liveStepCalories,
+  // ── Goal context ──
+  const goalCtx = getGoalContext()
+
+  // ── TodayCard props ──
+  const kalorienData = {
+    current: totals.kcal,
+    goal:    goal.kcal,
     protein: { current: totals.protein, goal: goal.protein },
     carbs:   { current: totals.carbs,   goal: goal.carbs   },
     fat:     { current: totals.fat,     goal: goal.fat     },
-    steps: {
-      ...mockStats.steps,
-      today:             todaySteps,
-      avgLast4Weeks:     avgSteps,
-      goal:              stepsGoal,
-      suggestionPending: Math.abs(avgSteps - stepsGoal) / stepsGoal > 0.15,
-    },
   }
 
-  // ── Gym sync ──
-  const { userTemplates } = useGymContext()
-  const weekPlan     = useAtomValue(weekPlanAtom)
-  const exerciseData = useAtomValue(exerciseDataAtom)
-
-  const todayKey        = WEEK_KEYS[TODAY_IDX]
-  const todayTemplateId = weekPlan[todayKey] ?? null
-  const todayTemplate   = todayTemplateId ? userTemplates.find(t => t.id === todayTemplateId) ?? null : null
-  const todayExercises  = todayTemplateId ? (exerciseData[todayKey] ?? []) : []
-
-  const weekDone = WEEK_KEYS.filter(d => {
-    return weekPlan[d] && (exerciseData[d] ?? []).some(e => e.sets.length > 0)
-  }).length
-  const weekGoal = WEEK_KEYS.filter(d => weekPlan[d] !== null).length
-
-  const nextDayIdx   = WEEK_KEYS.findIndex((d, i) => i > TODAY_IDX && weekPlan[d] !== null)
-  const nextDay      = nextDayIdx >= 0 ? WEEK_KEYS[nextDayIdx] : null
-  const nextTemplate = nextDay && weekPlan[nextDay]
-    ? userTemplates.find(t => t.id === weekPlan[nextDay]) ?? null
-    : null
-
-  const gymStats: GymStats = {
-    lastDay:   todayTemplate?.name ?? 'Ruhetag',
-    exercises: todayExercises.filter(e => e.sets.length > 0).length,
-    weekDone,
-    weekGoal,
-    nextDay:   nextDay ? `${nextDay} · ${nextTemplate?.name ?? ''}` : '–',
-    restDay:   todayTemplateId === null,
+  const gymData = {
+    ...mockStats.gym,
+    weekDots: mockStats.week,
   }
-
-  // ── Ziel-Check: top PR exercises ──
-  const prExercises = Object.values(exerciseData)
-    .flat()
-    .filter(e => e.pr && e.sets.length > 0)
-    .slice(0, 3)
-
-  const zielItems = prExercises.length > 0
-    ? prExercises.map(e => {
-        const maxW  = Math.max(...e.sets.map(s => s.weight))
-        const delta = maxW - e.lastWeight
-        return {
-          label:  e.name,
-          value:  `${maxW} kg${delta > 0 ? ` (+${delta})` : ''}`,
-          status: 'ok' as const,
-        }
-      })
-    : [{ label: 'Heute noch kein PR', value: 'Viel Erfolg!', status: 'warn' as const }]
-
-  const goalCtx = getGoalContext()
-  const zielCheck: ZielCheck = { name: goalCtx.goalLabel, items: zielItems }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -152,15 +100,17 @@ export default function FeedScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
-        <ProgressCard
-          gym={gymStats}
-          kalorien={kalorienStats}
-          zielCheck={zielCheck}
-          week={mockStats.week}
-          onGymPress={() => router.navigate('/(tabs)/gym' as never)}
-          onKalorienPress={() => router.navigate('/(tabs)/calories' as never)}
-          onZielPress={() => router.push({ pathname: '/(tabs)/gym' as any, params: { section: 'ziel' } })}
-          onStepsGoalChange={setStepsGoal}
+        <TodayCard
+          kalorien={kalorienData}
+          gym={gymData}
+          steps={{ today: todaySteps, goal: stepsGoal }}
+          goalLabel={goalCtx.goalLabel}
+        />
+
+        <GoalCheckCard
+          weightStatus={goalCheck.weight}
+          calorieStatus={goalCheck.calories}
+          liftStatus={goalCheck.lifts}
         />
 
         {/* Friends Row */}

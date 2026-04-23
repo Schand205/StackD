@@ -6,7 +6,8 @@ import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
 import { ScreenHeader } from '@/components/shared/ScreenHeader'
 import { ProfileRowGroup } from '@/components/profil/ProfileRow'
-import { calorieMode } from '@/constants/mockData'
+import { calorieMode, goalCheck } from '@/constants/mockData'
+import { exerciseName } from '@/constants/exercises'
 
 const MODE_LABELS: Record<string, string> = {
   average: 'Stabiler Tagesbedarf',
@@ -15,11 +16,15 @@ const MODE_LABELS: Record<string, string> = {
 
 export default function EinstellungenScreen() {
   const router = useRouter()
-  const [modeLabel, setModeLabel] = useState(MODE_LABELS[calorieMode.mode])
+  const [modeLabel, setModeLabel]       = useState(MODE_LABELS[calorieMode.mode])
+  const [keyLiftsLabel, setKeyLiftsLabel] = useState(() =>
+    goalCheck.lifts.keyLiftIds.map(exerciseName).join(', ')
+  )
 
   useFocusEffect(
     useCallback(() => {
       setModeLabel(MODE_LABELS[calorieMode.mode])
+      setKeyLiftsLabel(goalCheck.lifts.keyLiftIds.map(exerciseName).join(', '))
     }, [])
   )
 
@@ -28,6 +33,7 @@ export default function EinstellungenScreen() {
       <ScreenHeader title="Einstellungen" onBack={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
         <Text style={styles.sectionLabel}>Kalorien</Text>
         <ProfileRowGroup rows={[
           {
@@ -39,6 +45,19 @@ export default function EinstellungenScreen() {
             onPress:   () => router.push('/einstellungen/kalorienberechnung' as never),
           },
         ]} />
+
+        <Text style={styles.sectionLabel}>Gym</Text>
+        <ProfileRowGroup rows={[
+          {
+            icon:      'barbell-outline',
+            iconColor: colors.purple,
+            iconBg:    colors.purpleLight,
+            label:     'Key Lifts',
+            value:     keyLiftsLabel,
+            onPress:   () => router.push('/einstellungen/key-lifts' as never),
+          },
+        ]} />
+
       </ScrollView>
     </SafeAreaView>
   )

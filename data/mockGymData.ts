@@ -1,4 +1,4 @@
-import type { Exercise, Template, WeekPlan, DayLog, SetLog, WorkoutSplit } from '@/types/gym'
+import type { Exercise, Template, WeekPlan, DayLog, ExerciseLog, SetLog, WorkoutSplit } from '@/types/gym'
 
 // ─── Exercises ────────────────────────────────────────────────────────────────
 
@@ -164,57 +164,97 @@ export const mockWeekPlan: WeekPlan = {
 const logMonday: DayLog = {
   date: '2026-04-13',
   templateId: 'tmpl_push',
-  sets: [
-    // Bankdrücken 4×8
-    { exerciseId: 'e_bench',   weight: 80,   reps: 8,  isPR: false },
-    { exerciseId: 'e_bench',   weight: 80,   reps: 8,  isPR: false },
-    { exerciseId: 'e_bench',   weight: 80,   reps: 7,  isPR: false },
-    { exerciseId: 'e_bench',   weight: 80,   reps: 7,  isPR: false },
-    // OHP 3×8
-    { exerciseId: 'e_ohp',     weight: 55,   reps: 8,  isPR: false },
-    { exerciseId: 'e_ohp',     weight: 55,   reps: 8,  isPR: false },
-    { exerciseId: 'e_ohp',     weight: 55,   reps: 7,  isPR: false },
-    // Dips 3×10 — bodyweight
-    { exerciseId: 'e_dips',    weight: 'BW', reps: 12, isPR: false },
-    { exerciseId: 'e_dips',    weight: 'BW', reps: 11, isPR: false },
-    { exerciseId: 'e_dips',    weight: 'BW', reps: 10, isPR: false },
-    // Trizeps Pushdown 3×12
-    { exerciseId: 'e_tpush',   weight: 30,   reps: 12, isPR: false },
-    { exerciseId: 'e_tpush',   weight: 30,   reps: 12, isPR: false },
-    { exerciseId: 'e_tpush',   weight: 30,   reps: 11, isPR: false },
-    // Seitheben 3×12
-    { exerciseId: 'e_lateral', weight: 10,   reps: 12, isPR: false },
-    { exerciseId: 'e_lateral', weight: 10,   reps: 12, isPR: false },
-    { exerciseId: 'e_lateral', weight: 10,   reps: 11, isPR: false },
+  exercises: [
+    {
+      exerciseId: 'e_bench',
+      sets: [
+        { id: 'mo_bench_s1', type: 'working', weight: 80, weightLabel: '80 kg', reps: 8, done: true },
+        { id: 'mo_bench_s2', type: 'working', weight: 80, weightLabel: '80 kg', reps: 8, done: true },
+        { id: 'mo_bench_s3', type: 'working', weight: 80, weightLabel: '80 kg', reps: 7, done: true },
+        { id: 'mo_bench_s4', type: 'working', weight: 80, weightLabel: '80 kg', reps: 7, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_ohp',
+      sets: [
+        { id: 'mo_ohp_s1', type: 'working', weight: 55, weightLabel: '55 kg', reps: 8, done: true },
+        { id: 'mo_ohp_s2', type: 'working', weight: 55, weightLabel: '55 kg', reps: 8, done: true },
+        { id: 'mo_ohp_s3', type: 'working', weight: 55, weightLabel: '55 kg', reps: 7, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_dips',
+      sets: [
+        { id: 'mo_dips_s1', type: 'working', weight: null, weightLabel: 'BW', reps: 12, done: true },
+        { id: 'mo_dips_s2', type: 'working', weight: null, weightLabel: 'BW', reps: 11, done: true },
+        { id: 'mo_dips_s3', type: 'working', weight: null, weightLabel: 'BW', reps: 10, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_tpush',
+      sets: [
+        { id: 'mo_tpush_s1', type: 'working', weight: 30, weightLabel: '30 kg', reps: 12, done: true },
+        { id: 'mo_tpush_s2', type: 'working', weight: 30, weightLabel: '30 kg', reps: 12, done: true },
+        { id: 'mo_tpush_s3', type: 'working', weight: 30, weightLabel: '30 kg', reps: 11, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_lateral',
+      sets: [
+        { id: 'mo_lat_s1', type: 'working', weight: 10, weightLabel: '10 kg', reps: 12, done: true },
+        { id: 'mo_lat_s2', type: 'working', weight: 10, weightLabel: '10 kg', reps: 12, done: true },
+        { id: 'mo_lat_s3', type: 'working', weight: 10, weightLabel: '10 kg', reps: 11, done: true },
+      ],
+    },
   ],
 }
 
-// Tuesday — Pull session, PR on Rudern LH
+// Tuesday — Pull session
 const logTuesday: DayLog = {
   date: '2026-04-14',
   templateId: 'tmpl_pull',
-  sets: [
-    // Klimmzüge 4×8 — bodyweight
-    { exerciseId: 'e_pullup',   weight: 'BW', reps: 8,  isPR: false },
-    { exerciseId: 'e_pullup',   weight: 'BW', reps: 8,  isPR: false },
-    { exerciseId: 'e_pullup',   weight: 'BW', reps: 7,  isPR: false },
-    { exerciseId: 'e_pullup',   weight: 'BW', reps: 7,  isPR: false },
-    // Rudern LH 3×8 — PR bei 82.5 kg (vorher 80 kg)
-    { exerciseId: 'e_row',      weight: 82.5, reps: 8,  isPR: true  },
-    { exerciseId: 'e_row',      weight: 82.5, reps: 8,  isPR: true  },
-    { exerciseId: 'e_row',      weight: 82.5, reps: 7,  isPR: false },
-    // Face Pull 3×12
-    { exerciseId: 'e_facepull', weight: 20,   reps: 12, isPR: false },
-    { exerciseId: 'e_facepull', weight: 20,   reps: 12, isPR: false },
-    { exerciseId: 'e_facepull', weight: 20,   reps: 11, isPR: false },
-    // Bizeps Curl 3×10
-    { exerciseId: 'e_bicurl',   weight: 22.5, reps: 10, isPR: false },
-    { exerciseId: 'e_bicurl',   weight: 22.5, reps: 10, isPR: false },
-    { exerciseId: 'e_bicurl',   weight: 22.5, reps: 9,  isPR: false },
-    // Hammer Curl 3×10
-    { exerciseId: 'e_hammer',   weight: 20,   reps: 10, isPR: false },
-    { exerciseId: 'e_hammer',   weight: 20,   reps: 10, isPR: false },
-    { exerciseId: 'e_hammer',   weight: 20,   reps: 9,  isPR: false },
+  exercises: [
+    {
+      exerciseId: 'e_pullup',
+      sets: [
+        { id: 'tu_pullup_w1', type: 'warmup',  weight: null, weightLabel: 'BW',   reps: 8, done: true },
+        { id: 'tu_pullup_s1', type: 'working', weight: 5,    weightLabel: 'BW+5', reps: 8, done: true },
+        { id: 'tu_pullup_s2', type: 'working', weight: 5,    weightLabel: 'BW+5', reps: 7, done: true },
+        { id: 'tu_pullup_s3', type: 'working', weight: 5,    weightLabel: 'BW+5', reps: 6, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_row',
+      sets: [
+        { id: 'tu_row_s1', type: 'working', weight: 82.5, weightLabel: '82,5 kg', reps: 8, done: true },
+        { id: 'tu_row_s2', type: 'working', weight: 82.5, weightLabel: '82,5 kg', reps: 8, done: true },
+        { id: 'tu_row_s3', type: 'working', weight: 82.5, weightLabel: '82,5 kg', reps: 7, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_facepull',
+      sets: [
+        { id: 'tu_fp_s1', type: 'working', weight: 20, weightLabel: '20 kg', reps: 12, done: true },
+        { id: 'tu_fp_s2', type: 'working', weight: 20, weightLabel: '20 kg', reps: 12, done: true },
+        { id: 'tu_fp_s3', type: 'working', weight: 20, weightLabel: '20 kg', reps: 11, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_bicurl',
+      sets: [
+        { id: 'tu_bic_s1', type: 'working', weight: 22.5, weightLabel: '22,5 kg', reps: 10, done: true },
+        { id: 'tu_bic_s2', type: 'working', weight: 22.5, weightLabel: '22,5 kg', reps: 10, done: true },
+        { id: 'tu_bic_s3', type: 'working', weight: 22.5, weightLabel: '22,5 kg', reps:  9, done: true },
+      ],
+    },
+    {
+      exerciseId: 'e_hammer',
+      sets: [
+        { id: 'tu_ham_s1', type: 'working', weight: 20, weightLabel: '20 kg', reps: 10, done: true },
+        { id: 'tu_ham_s2', type: 'working', weight: 20, weightLabel: '20 kg', reps: 10, done: true },
+        { id: 'tu_ham_s3', type: 'working', weight: 20, weightLabel: '20 kg', reps:  9, done: true },
+      ],
+    },
   ],
 }
 
@@ -238,25 +278,26 @@ export function findExercise(id: string): Exercise | undefined {
 
 /**
  * Highest numeric weight ever logged for an exercise.
- * BW sets are excluded from the comparison.
- * Returns undefined if no numeric sets have been logged.
+ * BW sets (weight === null) are excluded.
  */
 export function getPreviousBest(exerciseId: string): number | undefined {
   const weights = mockDayLogs
-    .flatMap(d => d.sets)
-    .filter(s => s.exerciseId === exerciseId && typeof s.weight === 'number')
+    .flatMap(d => d.exercises)
+    .filter(e => e.exerciseId === exerciseId)
+    .flatMap(e => e.sets)
+    .filter(s => s.weight !== null)
     .map(s => s.weight as number)
   return weights.length > 0 ? Math.max(...weights) : undefined
 }
 
 /**
  * Last logged set for an exercise — used as prefill in SetEntrySheet.
- * Returns undefined if never logged.
  */
 export function getLastSet(exerciseId: string): SetLog | undefined {
   for (let i = mockDayLogs.length - 1; i >= 0; i--) {
-    const sets = mockDayLogs[i].sets.filter(s => s.exerciseId === exerciseId)
-    if (sets.length > 0) return sets[sets.length - 1]
+    const exLog = mockDayLogs[i].exercises.find(e => e.exerciseId === exerciseId)
+    if (!exLog || exLog.sets.length === 0) continue
+    return exLog.sets[exLog.sets.length - 1]
   }
   return undefined
 }

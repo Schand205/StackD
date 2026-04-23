@@ -106,6 +106,7 @@ export function ExercisePickerSheet({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipsRow}
+            contentOffset={{ x: 0, y: 0 }}
             style={styles.chipsScroll}
           >
             {MUSCLE_GROUPS.map(group => (
@@ -269,6 +270,7 @@ const styles = StyleSheet.create({
 
   // ── Chips ──
   chipsScroll: {
+    height: 34,
     marginBottom: 10,
   },
   chipsRow: {

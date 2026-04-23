@@ -20,17 +20,24 @@ export type WeekDay = 'Mo' | 'Di' | 'Mi' | 'Do' | 'Fr' | 'Sa' | 'So'
 /** Maps each calendar day to a template ID, or null for a rest day. */
 export type WeekPlan = Record<WeekDay, string | null>
 
-export type SetLog = {
-  exerciseId: string
-  /** kg as number, or 'BW' for bodyweight */
-  weight: number | 'BW'
+export type SetType = 'working' | 'warmup'
+
+export interface SetLog {
+  id: string
+  type: SetType
+  weight: number | null  // null = Körpergewicht (BW)
+  weightLabel: string    // e.g. "BW", "BW+5", "82,5 kg"
   reps: number
-  isPR: boolean
+  done: boolean
 }
 
-export type DayLog = {
-  /** ISO date string, e.g. "2026-04-14" */
+export interface ExerciseLog {
+  exerciseId: string
+  sets: SetLog[]
+}
+
+export interface DayLog {
   date: string
   templateId: string
-  sets: SetLog[]
+  exercises: ExerciseLog[]
 }

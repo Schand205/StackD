@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { colors } from '@/constants/colors'
 import { FS, SP } from '@/constants/layout'
@@ -16,7 +16,8 @@ import { WeightBottomSheet } from '@/components/profil/WeightBottomSheet'
 import { BodyDataBottomSheet, type BodyData } from '@/components/profil/BodyDataBottomSheet'
 import { StepsGoalBottomSheet } from '@/components/profil/StepsGoalBottomSheet'
 import { LineChart } from '@/components/charts/LineChart'
-import { mockProfil, weightHistory as INITIAL_HISTORY } from '@/constants/mockData'
+import { mockProfil, weightHistory as INITIAL_HISTORY, goalCheck } from '@/constants/mockData'
+import { exerciseName } from '@/constants/exercises'
 import { useAtom } from 'jotai'
 import { stepsGoalAtom } from '@/atoms/stepsAtoms'
 import { getGoalContext } from '@/utils/goalContext'
@@ -135,6 +136,15 @@ export default function ProfilScreen() {
   const trainingLabel = `${p.trainingDays.length} Tage · ${p.trainingDays.join(' ')}`
   const currentWeight = history[history.length - 1]?.weight ?? weight
 
+  const [keyLiftsLabel, setKeyLiftsLabel] = useState(
+    () => goalCheck.lifts.keyLiftIds.map(exerciseName).join(', ')
+  )
+  useFocusEffect(
+    useCallback(() => {
+      setKeyLiftsLabel(goalCheck.lifts.keyLiftIds.map(exerciseName).join(', '))
+    }, [])
+  )
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
 
@@ -229,6 +239,11 @@ export default function ProfilScreen() {
                 icon: 'barbell-outline', iconColor: colors.purple, iconBg: colors.purpleLight,
                 label: 'Trainingstage', value: trainingLabel,
                 onPress: () => router.push({ pathname: '/(tabs)/gym' as any, params: { section: 'trainingsplan' } }),
+              },
+              {
+                icon: 'trophy-outline', iconColor: colors.purple, iconBg: colors.purpleLight,
+                label: 'Key Lifts', value: keyLiftsLabel,
+                onPress: () => router.push('/einstellungen/key-lifts' as never),
               },
               {
                 icon: 'heart-outline',

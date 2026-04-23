@@ -82,6 +82,7 @@ export const mockProfil = {
   friendCount:           4,
 } as const
 
+// Used by: einstellungen/kalorienberechnung, ProgressCard (legacy)
 export const calorieMode: {
   mode: 'average' | 'live';
   isPremium: boolean;
@@ -90,33 +91,27 @@ export const calorieMode: {
   isPremium: false,
 }
 
+// Used by: TodayCard (kalorien col), GoalCheckCard (via goalCheck), calories.tsx (steps)
 export const mockStats = {
+  // Used by: TodayCard gym column
   gym: {
-    lastDay: 'Push-Tag · Do.',
+    lastDay:   'Push-Tag · Do.',
     exercises: 4,
-    weekDone: 2,
-    weekGoal: 4,
-    nextDay: 'Pull-Tag',
-    restDay: true,
+    duration:  58,
+    weekDone:  2,
+    weekGoal:  4,
+    nextDay:   'Pull-Tag',
+    isRestDay: true,
   },
+  // Used by: TodayCard kalorien column (as fallback; live data preferred in feed screen)
   kalorien: {
-    current:         1840,
-    goal:            2400,
-    basalRate:       1820,
-    stepCalories:    340,
-    liveStepCalories: 180,
+    current:   1840,
+    goal:      2400,
     protein: { current: 142, goal: 180 },
     carbs:   { current: 198, goal: 300 },
     fat:     { current: 48,  goal: 80  },
   },
-  zielCheck: {
-    name: 'Lean Bulk',
-    items: [
-      { label: 'Körpergewicht',    value: '+0,6 kg · on track', status: 'ok'   },
-      { label: 'Lift-Gewicht',     value: 'Squat +5 kg',        status: 'ok'   },
-      { label: 'Kalorien-Schnitt', value: '1.980 · zu wenig',   status: 'warn' },
-    ],
-  },
+  // Used by: calories.tsx, StepsGoalBottomSheet, TodayCard steps row
   steps: (() => {
     const today         = 6240
     const goal          = 8000
@@ -137,17 +132,35 @@ export const mockStats = {
       suggestedGoal,
     }
   })(),
+  // Used by: TodayCard gym column weekDots
   week: [
-    { pct: 98,  isToday: false },  // Mo — grün
-    { pct: 72,  isToday: false },  // Di — lila
-    { pct: 102, isToday: false },  // Mi — grün
-    { pct: 115, isToday: false },  // Do — amber
-    { pct: 60,  isToday: true  },  // Fr — heute, lila
-    { pct: 0,   isToday: false },  // Sa — leer
-    { pct: 0,   isToday: false },  // So — leer
+    { pct: 98,  isToday: false },  // Mo
+    { pct: 72,  isToday: false },  // Di
+    { pct: 102, isToday: false },  // Mi
+    { pct: 115, isToday: false },  // Do
+    { pct: 60,  isToday: true  },  // Fr — heute
+    { pct: 0,   isToday: false },  // Sa
+    { pct: 0,   isToday: false },  // So
   ],
 } as const;
 
+export type GoalStatus = 'ok' | 'warn' | 'bad'
+
+// Used by: GoalCheckCard — IDs reference constants/exercises.ts
+export const keyLiftIds = ['kniebeuge', 'bankdruecken', 'ohp'] as const
+export type KeyLiftId = typeof keyLiftIds[number]
+
+export const goalCheck: {
+  weight:   { change: number; status: GoalStatus }
+  calories: { weekAvg: number; status: GoalStatus }
+  lifts:    { keyLiftIds: string[]; improved: number; total: number; status: GoalStatus }
+} = {
+  weight:   { change: 0.6,   status: 'ok'   },
+  calories: { weekAvg: 1980, status: 'warn' },
+  lifts:    { keyLiftIds: ['kniebeuge', 'bankdruecken', 'ohp'], improved: 2, total: 3, status: 'ok' },
+}
+
+// Used by: profil.tsx Verlauf tab, WeightBottomSheet mini-chart
 export const weightHistory = [
   { date: '2026-01-05', weight: 80.4 },
   { date: '2026-01-12', weight: 80.8 },
@@ -167,8 +180,11 @@ export const weightHistory = [
   { date: '2026-04-21', weight: 82.4 },
 ] as const;
 
+// Used by: gym.tsx Verlauf tab, uebungsverlauf.tsx
+// id references constants/exercises.ts EXERCISES; name kept for UI display
 export const exerciseHistory = [
   {
+    id: 'kniebeuge',
     name: 'Kniebeuge',
     color: '#7F77DD',
     data: [
@@ -190,6 +206,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'bankdruecken',
     name: 'Bankdrücken',
     color: '#1D9E75',
     data: [
@@ -211,6 +228,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'ohp',
     name: 'OHP',
     color: '#EF9F27',
     data: [
@@ -232,6 +250,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'deadlift',
     name: 'Deadlift',
     color: '#D85A30',
     data: [
@@ -253,6 +272,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'rudern_lh',
     name: 'Rudern LH',
     color: '#888780',
     data: [
@@ -274,6 +294,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'klimmzuege',
     name: 'Klimmzüge',
     color: '#3B82F6',
     data: [
@@ -295,6 +316,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'leg_press',
     name: 'Leg Press',
     color: '#EC4899',
     data: [
@@ -316,6 +338,7 @@ export const exerciseHistory = [
     ],
   },
   {
+    id: 'bizeps_curl',
     name: 'Bizeps Curl',
     color: '#F97316',
     data: [

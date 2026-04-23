@@ -15,7 +15,7 @@ type TabDef = {
 };
 
 const TABS: TabDef[] = [
-  { key: 'feed',     label: 'Feed',     iconActive: 'sunny',    iconInactive: 'sunny-outline'   },
+  { key: 'feed',     label: 'Heute',    iconActive: 'sunny',    iconInactive: 'sunny-outline'   },
   { key: 'gym',      label: 'Gym',      iconActive: 'barbell',  iconInactive: 'barbell-outline' },
   { key: 'kalorien', label: 'Kalorien', iconActive: 'time',     iconInactive: 'time-outline'    },
   { key: 'profil',   label: 'Profil',   iconActive: 'person',   iconInactive: 'person-outline'  },
