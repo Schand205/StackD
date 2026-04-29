@@ -16,6 +16,7 @@ import { FS, SP, screenWidth } from '@/constants/layout'
 import { TabBar } from '@/components/common/TabBar'
 import { selectedDateAtom } from '@/atoms/nutritionAtoms'
 import { useDayLog, useUserGoal } from '@/hooks/useNutrition'
+import { AddMealSheet } from '@/components/nutrition/AddMealSheet'
 import type { MealType, MealEntry } from '@/types/nutrition'
 
 // ─── Date helpers (always local timezone) ────────────────────────────────────
@@ -322,35 +323,47 @@ function MacroPill({ label, current, goal, color }: {
 
 // ─── MealCard ─────────────────────────────────────────────────────────────────
 
-function MealCard({ mealType, entries, onPress }: {
-  mealType: MealType; entries: MealEntry[]; onPress: () => void
+function MealCard({ mealType, entries, onPress, onAddPress }: {
+  mealType: MealType; entries: MealEntry[]; onPress: () => void; onAddPress: () => void
 }) {
   const { label, emoji } = MEAL_CONFIG[mealType]
   const totalKcal = entries.reduce((s, e) => s + e.kcal, 0)
   const isEmpty   = entries.length === 0
   return (
-    <TouchableOpacity style={styles.mealCard} onPress={onPress} activeOpacity={0.75}>
+    <View style={styles.mealCard}>
       <View style={styles.mealHeader}>
-        <View style={[styles.mealEmoji, isEmpty && styles.mealEmojiDimmed]}>
-          <Text style={styles.mealEmojiText}>{emoji}</Text>
-        </View>
-        <View style={styles.mealTitleCol}>
-          <Text style={[styles.mealTitle, isEmpty && styles.mealTitleDimmed]}>{label}</Text>
-          {!isEmpty && (
-            <Text style={styles.mealSubtitle}>
-              {entries.length} {entries.length === 1 ? 'Eintrag' : 'Einträge'}
-            </Text>
-          )}
-        </View>
+        {/* Left: emoji + title (+ kcal/chevron when not empty) — pressable for detail nav */}
         {isEmpty ? (
-          <Ionicons name="add" size={22} color={colors.purple} />
+          <View style={styles.mealHeaderLeft}>
+            <View style={[styles.mealEmoji, styles.mealEmojiDimmed]}>
+              <Text style={styles.mealEmojiText}>{emoji}</Text>
+            </View>
+            <View style={styles.mealTitleCol}>
+              <Text style={[styles.mealTitle, styles.mealTitleDimmed]}>{label}</Text>
+            </View>
+          </View>
         ) : (
-          <>
+          <TouchableOpacity style={styles.mealHeaderLeft} onPress={onPress} activeOpacity={0.75}>
+            <View style={styles.mealEmoji}>
+              <Text style={styles.mealEmojiText}>{emoji}</Text>
+            </View>
+            <View style={styles.mealTitleCol}>
+              <Text style={styles.mealTitle}>{label}</Text>
+              <Text style={styles.mealSubtitle}>
+                {entries.length} {entries.length === 1 ? 'Eintrag' : 'Einträge'}
+              </Text>
+            </View>
             <Text style={styles.mealKcal}>{totalKcal} kcal</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginLeft: 4 }} />
-          </>
+          </TouchableOpacity>
         )}
+
+        {/* "+" button — always visible */}
+        <TouchableOpacity style={styles.mealAddBtn} onPress={onAddPress} activeOpacity={0.75}>
+          <Ionicons name="add" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
+
       {!isEmpty && entries.map((entry, i) => (
         <View key={entry.id} style={[styles.entryRow, i === 0 && styles.entryRowFirst]}>
           <View style={styles.entryDot} />
@@ -358,7 +371,7 @@ function MealCard({ mealType, entries, onPress }: {
           <Text style={styles.entryKcal}>{entry.kcal} kcal</Text>
         </View>
       ))}
-    </TouchableOpacity>
+    </View>
   )
 }
 
@@ -388,6 +401,14 @@ export default function CaloriesScreen() {
 
   const { grouped: entriesByMeal, totals } = useDayLog(date)
   const { goal } = useUserGoal()
+
+  const [addSheetVisible,  setAddSheetVisible]  = useState(false)
+  const [addSheetMealType, setAddSheetMealType] = useState<MealType>('breakfast')
+
+  function openAddSheet(mealType: MealType) {
+    setAddSheetMealType(mealType)
+    setAddSheetVisible(true)
+  }
 
   const stepsGoal = useAtomValue(stepsGoalAtom)
   const [todaySteps, setTodaySteps] = useState(mockStats.steps.today)
@@ -483,6 +504,7 @@ export default function CaloriesScreen() {
             mealType={mealType}
             entries={entriesByMeal[mealType]}
             onPress={() => router.push({ pathname: '/(tabs)/calories/[mealType]' as any, params: { mealType } })}
+            onAddPress={() => openAddSheet(mealType)}
           />
         ))}
       </ScrollView>
@@ -491,6 +513,12 @@ export default function CaloriesScreen() {
         const routes: Record<string, string> = { feed: '/(tabs)/', gym: '/(tabs)/gym', profil: '/(tabs)/profil' }
         if (routes[key]) router.navigate(routes[key] as never)
       }} />
+
+      <AddMealSheet
+        visible={addSheetVisible}
+        onClose={() => setAddSheetVisible(false)}
+        preselectedMealType={addSheetMealType}
+      />
 
       <CalendarPicker
         visible={calendarVisible}
@@ -563,8 +591,10 @@ const styles = StyleSheet.create({
   stepsBarTrack: { flexDirection: 'row', height: 4, borderRadius: 3, backgroundColor: colors.bgSecondary, overflow: 'hidden' },
 
   // Meal card
-  mealCard:      { backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: SP.card, paddingVertical: 12 },
-  mealHeader:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mealCard:        { backgroundColor: colors.bgCard, borderRadius: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: SP.card, paddingVertical: 12 },
+  mealHeader:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  mealHeaderLeft:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mealAddBtn:      { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bgSecondary, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' },
   mealEmoji:     { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.bgSecondary, alignItems: 'center', justifyContent: 'center' },
   mealEmojiDimmed: { opacity: 0.45 },
   mealEmojiText: { fontSize: 18 },

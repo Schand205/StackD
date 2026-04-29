@@ -273,6 +273,11 @@ export default function GymScreen() {
 
   const exercises = currentTemplate?.exercises ?? []
 
+  // ── Auto-expand first exercise when day/template changes ──
+  useEffect(() => {
+    setActiveExerciseId(exercises.length > 0 ? exercises[0].id : null)
+  }, [selectedDay, currentTemplateId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const headerLabel = selectedDay === TODAY_IDX
     ? `Heute – ${currentTemplate?.name ?? 'Ruhetag'}`
     : `${currentWeekDay}. – ${currentTemplate?.name ?? 'Ruhetag'}`
@@ -367,33 +372,19 @@ export default function GymScreen() {
 
   function handleToggleDone(exerciseId: string, setIndex: number) {
     const ex = currentTemplate?.exercises.find(e => e.id === exerciseId)
-    const todaySets = todayLog?.exercises.find(e => e.exerciseId === exerciseId)?.sets ?? []
+    const todaySetsForEx = todayLog?.exercises.find(e => e.exerciseId === exerciseId)?.sets ?? []
+    const lastSetsForEx  = currentTemplateId
+      ? getLastSessionSets(exerciseId, currentTemplateId, mockDayLogs, selectedDate)
+      : []
+    const existingSet = todaySetsForEx[setIndex]
     setSelectedExercise({
       exerciseId,
       exerciseName: ex?.name ?? '',
-      setIndex,
-      setType: todaySets[setIndex]?.type ?? 'working',
+      // If the row exists in today's log, edit it in-place; otherwise append a new set
+      setIndex: existingSet !== undefined ? setIndex : -1,
+      setType:  existingSet?.type ?? lastSetsForEx[setIndex]?.type ?? 'working',
     })
     setEntrySheetVisible(true)
-  }
-
-  function handleUpdateSet(exerciseId: string, setIndex: number, weightStr: string, reps: number) {
-    const weight = weightStr.startsWith('BW')
-      ? (weightStr.includes('+') ? parseFloat(weightStr.replace('BW+', '')) : null)
-      : parseFloat(weightStr.replace(' kg', '').replace(',', '.'))
-
-    setTodayLog(prev => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        exercises: prev.exercises.map(e => {
-          if (e.exerciseId !== exerciseId) return e
-          const newSets = [...e.sets]
-          newSets[setIndex] = { ...newSets[setIndex], weight, weightLabel: weightStr, reps, done: true }
-          return { ...e, sets: newSets }
-        }),
-      }
-    })
   }
 
   function handleSave(weight: number, reps: number, isPR: boolean) {
@@ -537,7 +528,6 @@ export default function GymScreen() {
                     lastSets={lastSets}
                     onAddSet={(type) => handleAddSet(ex.id, type)}
                     onToggleDone={(i) => handleToggleDone(ex.id, i)}
-                    onUpdateSet={(i, w, r) => handleUpdateSet(ex.id, i, w, r)}
                     isActive={activeExerciseId === ex.id}
                     onPress={() => setActiveExerciseId(
                       activeExerciseId === ex.id ? null : ex.id

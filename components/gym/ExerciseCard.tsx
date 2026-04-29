@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { colors } from '@/constants/colors'
 import type { SetLog, SetType } from '@/types/gym'
@@ -25,7 +25,6 @@ type Props = {
   lastSets:     SetLog[]
   onAddSet:     (type: SetType) => void
   onToggleDone: (setIndex: number) => void
-  onUpdateSet:  (setIndex: number, weight: string, reps: number) => void
   isActive:     boolean
   onPress:      () => void
 }
@@ -133,7 +132,7 @@ const cellStyle: Record<CellVariant, object> = {
   'last-empty':   {},
   'today-done':   { backgroundColor: TEAL_LIGHT, borderColor: '#5DCAA5' },
   'today-active': { backgroundColor: PURPLE_LIGHT, borderWidth: 1.5, borderColor: PURPLE },
-  'today-future': { backgroundColor: '#f7f6f2', borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#d0cec8', opacity: 0.45 },
+  'today-future': { backgroundColor: '#f7f6f2', borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#d0cec8' },
 }
 
 // ─── ExerciseCard ─────────────────────────────────────────────────────────────
@@ -144,139 +143,186 @@ export function ExerciseCard({
   lastSets,
   onAddSet,
   onToggleDone,
-  onUpdateSet,
   isActive,
   onPress,
 }: Props) {
-  const maxRows = Math.max(lastSets.length, todaySets.length)
+  const maxRows   = Math.max(lastSets.length, todaySets.length)
   const doneCount = todaySets.filter(s => s.done).length
   const showColumns = lastSets.length > 0
 
+  // Collapsed summary badge
+  const workingLast  = lastSets.filter(s => s.type === 'working')
+  const refSet       = workingLast.length > 0 ? workingLast[workingLast.length - 1] : lastSets[lastSets.length - 1]
+  const workingCount = workingLast.length > 0 ? workingLast.length : lastSets.length
+  const summaryText  = lastSets.length === 0
+    ? 'noch kein Eintrag'
+    : `zuletzt: ${refSet.weightLabel} · ${workingCount}×${refSet.reps}`
+
+  const totalSets    = Math.max(lastSets.length, todaySets.length)
+  const showProgress = doneCount > 0
+
   return (
-    <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.97}>
+    <TouchableOpacity
+      style={[s.card, isActive && s.cardActive]}
+      onPress={() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+        onPress()
+      }}
+      activeOpacity={0.97}
+    >
 
-      {/* ── Header ── */}
-      <Text style={[s.exerciseName, { color: isActive ? PURPLE_DARK : colors.textPrimary }]}>
-        {exercise.name}
-      </Text>
+      {/* ── Header row (always visible) ── */}
+      <View style={s.headerRow}>
+        <Text style={[s.exerciseName, { color: isActive ? PURPLE_DARK : colors.textPrimary }]}>
+          {exercise.name}
+        </Text>
 
-      {/* ── Column headers ── */}
-      {showColumns && (
-        <View style={s.colHeader}>
-          <View style={s.badgeCol} />
-          <View style={s.gap} />
-          <Text style={[s.colLabel, { color: colors.textTertiary }]}>LETZTES MAL</Text>
-          <View style={s.arrowCol} />
-          <Text style={[s.colLabel, { color: PURPLE }]}>HEUTE</Text>
-        </View>
-      )}
-
-      {/* ── Rows ── */}
-      {Array.from({ length: maxRows }, (_, i) => {
-        const lastSet  = lastSets[i]  ?? null
-        const todaySet = todaySets[i] ?? null
-
-        const isNextTarget =
-          doneCount === i &&
-          lastSet !== null &&
-          todaySet !== null &&
-          !todaySet.done
-
-        // Badge
-        let badgeVariant: BadgeVariant
-        let badgeLabel: string
-        if (todaySet?.type === 'warmup' || lastSet?.type === 'warmup') {
-          badgeVariant = todaySet?.done ? 'done' : isNextTarget ? 'active' : 'future'
-          badgeLabel = 'W'
-        } else {
-          const num = String(i + (lastSets[0]?.type === 'warmup' ? 0 : 1))
-          badgeVariant = todaySet?.done ? 'done' : isNextTarget ? 'active' : 'future'
-          badgeLabel = num
-        }
-
-        // Left cell
-        let leftVariant: CellVariant
-        if (!lastSet) {
-          leftVariant = 'last-empty'
-        } else if (isNextTarget) {
-          leftVariant = 'last-target'
-        } else {
-          leftVariant = 'last-normal'
-        }
-
-        // Right cell
-        let rightVariant: CellVariant
-        if (!todaySet) {
-          rightVariant = 'today-future'
-        } else if (todaySet.done) {
-          rightVariant = 'today-done'
-        } else if (isNextTarget) {
-          rightVariant = 'today-active'
-        } else {
-          rightVariant = 'today-future'
-        }
-
-        const isPR =
-          todaySet?.done === true &&
-          lastSet !== null &&
-          todaySet.weight !== null &&
-          lastSet.weight !== null &&
-          todaySet.weight > lastSet.weight
-
-        return (
-          <View key={i} style={s.row}>
-            {/* Badge */}
-            <View style={s.badgeCol}>
-              <SetBadge label={badgeLabel} variant={badgeVariant} />
-            </View>
-
-            <View style={s.gap} />
-
-            {/* Left: last session */}
-            <View style={s.dataCol}>
-              <SetCell
-                variant={leftVariant}
-                weightLabel={lastSet?.weightLabel}
-                reps={lastSet?.reps}
-              />
-            </View>
-
-            {/* Arrow */}
-            <View style={s.arrowCol}>
-              {lastSet && (
-                <Ionicons
-                  name="arrow-forward"
-                  size={12}
-                  color={isNextTarget ? AMBER : '#c0beb8'}
-                />
-              )}
-            </View>
-
-            {/* Right: today */}
-            <View style={s.dataCol}>
-              <SetCell
-                variant={rightVariant}
-                weightLabel={todaySet?.weightLabel}
-                reps={todaySet?.reps}
-                isPR={isPR}
-                onPress={rightVariant === 'today-active' ? () => onToggleDone(i) : undefined}
-              />
-            </View>
+        {!isActive && showProgress && (
+          <View style={s.progressBadge}>
+            <Text style={s.progressText}>{doneCount} / {totalSets} Sätze</Text>
           </View>
-        )
-      })}
+        )}
 
-      {/* ── Footer buttons ── */}
-      <View style={s.footer}>
-        <TouchableOpacity style={s.addBtn} onPress={() => onAddSet('working')} activeOpacity={0.75}>
-          <Ionicons name="add" size={14} color={PURPLE_DARK} />
-          <Text style={s.addBtnText}>Satz</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.addBtn, s.addBtnWarmup]} onPress={() => onAddSet('warmup')} activeOpacity={0.75}>
-          <Ionicons name="add" size={14} color={TEAL_DARK} />
-          <Text style={[s.addBtnText, { color: TEAL_DARK }]}>Aufwärmsatz</Text>
-        </TouchableOpacity>
+        {!isActive && (
+          <View style={s.summaryBadge}>
+            <Text style={s.summaryBadgeText} numberOfLines={1}>{summaryText}</Text>
+          </View>
+        )}
+
+        <Ionicons
+          name={isActive ? 'chevron-up' : 'chevron-down'}
+          size={14}
+          color={isActive ? PURPLE : colors.textTertiary}
+        />
       </View>
+
+      {/* ── Expanded content ── */}
+      {isActive && (
+        <>
+          {/* Column headers */}
+          {showColumns && (
+            <View style={s.colHeader}>
+              <View style={s.badgeCol} />
+              <View style={s.gap} />
+              <Text style={[s.colLabel, { color: colors.textTertiary }]}>LETZTES MAL</Text>
+              <View style={s.arrowCol} />
+              <Text style={[s.colLabel, { color: PURPLE }]}>HEUTE</Text>
+            </View>
+          )}
+
+          {/* Rows */}
+          {Array.from({ length: maxRows }, (_, i) => {
+            const lastSet  = lastSets[i]  ?? null
+            const todaySet = todaySets[i] ?? null
+
+            const isNextTarget =
+              doneCount === i &&
+              lastSet !== null &&
+              (todaySet === null || !todaySet.done)
+
+            const rowType     = (todaySet ?? lastSet)?.type ?? 'working'
+            const isWarmupRow = rowType === 'warmup'
+
+            const workingIndex = isWarmupRow ? 0 : (() => {
+              let count = 0
+              for (let j = 0; j < i; j++) {
+                if (((todaySets[j] ?? lastSets[j])?.type ?? 'working') !== 'warmup') count++
+              }
+              return count
+            })()
+
+            const badgeLabel = isWarmupRow ? 'W' : String(workingIndex + 1)
+            const badgeVariant: BadgeVariant =
+              todaySet?.done    ? 'done'
+              : isNextTarget    ? 'active'
+              : isWarmupRow     ? 'warmup'
+              :                   'future'
+
+            const leftVariant: CellVariant =
+              !lastSet        ? 'last-empty'
+              : isNextTarget  ? 'last-target'
+              :                 'last-normal'
+
+            const rightVariant: CellVariant =
+              todaySet?.done  ? 'today-done'
+              : isNextTarget  ? 'today-active'
+              :                 'today-future'
+
+            const isPreviewRow = todaySet === null && !isNextTarget
+
+            const isPR =
+              todaySet?.done === true &&
+              lastSet !== null &&
+              todaySet.weight !== null &&
+              lastSet.weight !== null &&
+              todaySet.weight > lastSet.weight
+
+            return (
+              <View key={i} style={[s.row, isPreviewRow && s.rowPreview]}>
+                <View style={s.badgeCol}>
+                  <SetBadge label={badgeLabel} variant={badgeVariant} />
+                </View>
+
+                <View style={s.gap} />
+
+                {showColumns ? (
+                  <>
+                    <View style={s.dataCol}>
+                      <SetCell
+                        variant={leftVariant}
+                        weightLabel={lastSet?.weightLabel}
+                        reps={lastSet?.reps}
+                      />
+                    </View>
+
+                    <View style={s.arrowCol}>
+                      {lastSet && (
+                        <Ionicons
+                          name="arrow-forward"
+                          size={12}
+                          color={isNextTarget ? AMBER : '#c0beb8'}
+                        />
+                      )}
+                    </View>
+
+                    <View style={s.dataCol}>
+                      <SetCell
+                        variant={rightVariant}
+                        weightLabel={todaySet?.weightLabel}
+                        reps={todaySet?.reps}
+                        isPR={isPR}
+                        onPress={rightVariant === 'today-active' ? () => onToggleDone(i) : undefined}
+                      />
+                    </View>
+                  </>
+                ) : (
+                  <View style={s.dataColFull}>
+                    <SetCell
+                      variant={rightVariant}
+                      weightLabel={todaySet?.weightLabel}
+                      reps={todaySet?.reps}
+                      isPR={isPR}
+                      onPress={rightVariant === 'today-active' ? () => onToggleDone(i) : undefined}
+                    />
+                  </View>
+                )}
+              </View>
+            )
+          })}
+
+          {/* Footer buttons */}
+          <View style={s.footer}>
+            <TouchableOpacity style={s.addBtn} onPress={() => onAddSet('working')} activeOpacity={0.75}>
+              <Ionicons name="add" size={14} color={PURPLE_DARK} />
+              <Text style={s.addBtnText}>Satz</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.addBtn, s.addBtnWarmup]} onPress={() => onAddSet('warmup')} activeOpacity={0.75}>
+              <Ionicons name="add" size={14} color={TEAL_DARK} />
+              <Text style={[s.addBtnText, { color: TEAL_DARK }]}>Aufwärmsatz</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
 
     </TouchableOpacity>
   )
@@ -298,11 +344,47 @@ const s = StyleSheet.create({
     marginBottom: 12,
     gap: 8,
   },
+  cardActive: {
+    borderWidth: 1.5,
+    borderColor: PURPLE,
+  },
 
+  // Header row (collapsed + expanded)
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   exerciseName: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
+  },
+
+  // Collapsed summary badge
+  summaryBadge: {
+    backgroundColor: SAND,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexShrink: 1,
+  },
+  summaryBadgeText: {
+    fontSize: 10,
+    color: SAND_TEXT,
+  },
+
+  // Collapsed progress badge
+  progressBadge: {
+    backgroundColor: TEAL_LIGHT,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  progressText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: TEAL_DARK,
   },
 
   // Column header
@@ -325,6 +407,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  rowPreview: {
+    opacity: 0.45,
+  },
   badgeCol: {
     width: BADGE_W,
     alignItems: 'center',
@@ -333,6 +418,9 @@ const s = StyleSheet.create({
     width: GAP_W,
   },
   dataCol: {
+    flex: 1,
+  },
+  dataColFull: {
     flex: 1,
   },
   arrowCol: {
